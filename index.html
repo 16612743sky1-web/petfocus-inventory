@@ -65,9 +65,15 @@ h2.sec{font-size:13px;color:var(--sub);font-weight:700;margin:22px 4px 10px;lett
 
 /* form */
 label.f{display:block;font-size:12.5px;font-weight:700;color:var(--sub);margin:16px 2px 7px}
-select,input[type=text],input[type=number]{
-  width:100%;padding:14px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);
+select,input[type=text],input[type=number],input[type=date]{
+  width:100%;padding:15px 14px;min-height:54px;border:1.5px solid var(--line);border-radius:12px;background:var(--paper);
   font-family:inherit;font-size:16px;color:var(--ink);appearance:none;-webkit-appearance:none}
+input[type=date]{font-size:17px;font-weight:600}
+input[type=date]::-webkit-calendar-picker-indicator{width:26px;height:26px;cursor:pointer;opacity:.7}
+.datebar{display:flex;gap:8px;align-items:stretch}
+.datebar input{flex:1}
+.dq{padding:0 18px;min-height:54px;border:1.5px solid var(--line);background:var(--paper);border-radius:12px;font-weight:800;font-size:16px;color:var(--brand);white-space:nowrap;cursor:pointer;flex:0 0 auto}
+.dq:active{background:var(--bg)}
 select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%238a7d70' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:38px}
 input:focus,select:focus{outline:none;border-color:var(--brand-l)}
 .seg{display:flex;gap:8px}
@@ -184,7 +190,11 @@ nav button.sel{color:var(--brand)}
     </div>
 
     <label class="f">날짜</label>
-    <input id="mDate" type="date">
+    <div class="datebar">
+      <button type="button" class="dq" onclick="setDate(0)">오늘</button>
+      <button type="button" class="dq" onclick="setDate(-1)">어제</button>
+      <input id="mDate" type="date">
+    </div>
 
     <label class="f">메모 (선택)</label>
     <input id="mMemo" type="text" placeholder="예) 6/1 생산분, 반품 등">
@@ -475,6 +485,7 @@ function go(t){
 
 /* ---------- boot ---------- */
 function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function setDate(off){ const d=new Date(); d.setDate(d.getDate()+off); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); document.getElementById('mDate').value=d.toISOString().slice(0,10); }
 document.getElementById('today').textContent=new Date().toLocaleDateString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'})+' 기준';
 document.getElementById('mDate').value=todayISO();
 setType('out'); calcCost(); initStore();
