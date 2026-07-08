@@ -176,7 +176,7 @@ nav button.sel{color:var(--brand)}
       </div>
     </div>
 
-    <label class="f">수량 (EA)</label>
+    <label class="f" id="qtyLabel">수량 (EA)</label>
     <div class="qty">
       <button class="qbtn" onclick="stepQty(-1)">−</button>
       <input id="mQty" type="number" inputmode="numeric" value="1" min="1">
@@ -273,6 +273,15 @@ const SEED = [
 ];
 const LOW = 20;
 
+/* 맘엔펫 = box 단위. 알래스카연어는 수량이 달라 box 표시만(환산 없음), 나머지는 1box=12ea */
+function unitInfo(name){
+  if(name.startsWith('맘엔펫')){
+    const alaska = name.indexOf('알래스카연어')>=0;
+    return { unit:'box', per: alaska?0:12 };
+  }
+  return { unit:'EA', per:0 };
+}
+
 let state = { products:[], logs:[], user:'형' };
 let type='out', chan='네이버스토어';
 let FS = null; // firestore handle when online
@@ -360,9 +369,11 @@ document.getElementById('mProd').onchange=updatePreview;
 function updatePreview(){
   const p=state.products.find(x=>x.id===document.getElementById('mProd').value);
   if(!p){document.getElementById('prev').textContent='';return;}
+  const u=unitInfo(p.name);
+  document.getElementById('qtyLabel').textContent = `수량 (${u.unit})`;
   const q=parseInt(document.getElementById('mQty').value)||0;
   const nv=(p.stock||0)+(type==='in'?q:-q);
-  document.getElementById('prev').innerHTML = `${p.name} · 현재 <b>${p.stock||0}</b> → 변경 후 <b style="color:${nv<0?'var(--out)':'var(--brand)'}">${nv}</b> EA`;
+  document.getElementById('prev').innerHTML = `${p.name} · 현재 <b>${p.stock||0}</b> → 변경 후 <b style="color:${nv<0?'var(--out)':'var(--brand)'}">${nv}</b> ${u.unit}`;
 }
 async function saveMove(){
   const pid=document.getElementById('mProd').value;
@@ -390,10 +401,13 @@ function render(){
   const list=document.getElementById('stockList'); list.innerHTML='';
   let sum=0,low=0;
   state.products.forEach((p,idx)=>{
-    sum+=(p.stock||0); const isLow=(p.stock||0)<=LOW; if(isLow)low++;
+    const u=unitInfo(p.name);
+    sum += u.per ? (p.stock||0)*u.per : (p.stock||0);
+    const isLow=(p.stock||0)<=LOW; if(isLow)low++;
     const d=document.createElement('div'); d.className='card pcard'+(isLow?' low':''); d.style.animationDelay=(idx*.03)+'s';
-    d.innerHTML=`<div><div class="pn">${p.name}</div>${isLow?'<span class="badge-low">재고 부족</span>':''}</div>
-      <div class="stk"><b>${p.stock||0}</b><small>EA</small></div>`;
+    const sub = u.per ? `<div class="pm">1box = ${u.per}ea · 총 ${((p.stock||0)*u.per).toLocaleString()}ea</div>` : '';
+    d.innerHTML=`<div><div class="pn">${p.name}</div>${sub}${isLow?'<span class="badge-low">재고 부족</span>':''}</div>
+      <div class="stk"><b>${p.stock||0}</b><small>${u.unit}</small></div>`;
     d.onclick=()=>{ document.getElementById('mProd').value=p.id; go('move'); updatePreview(); };
     list.appendChild(d);
   });
@@ -403,7 +417,7 @@ function render(){
 
   // product select
   const sel=document.getElementById('mProd'); const cur=sel.value;
-  sel.innerHTML=state.products.map(p=>`<option value="${p.id}">${p.name} (재고 ${p.stock||0})</option>`).join('');
+  sel.innerHTML=state.products.map(p=>`<option value="${p.id}">${p.name} (재고 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
   if(cur) sel.value=cur; updatePreview();
 
   // logs
