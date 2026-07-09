@@ -54,6 +54,16 @@ h2.sec{font-size:13px;color:var(--sub);font-weight:700;margin:22px 4px 10px;lett
 .stat .card.alert .n{color:var(--out)}
 .stat .card.alert{border-color:#e2ad9b;background:linear-gradient(0deg,var(--outbg),var(--paper))}
 .stat .l small{display:block;font-size:11px;color:var(--out);font-weight:800;margin-top:1px}
+.stat .l .cu{color:var(--sub);font-weight:700;font-size:11px}
+
+/* 대분류 헤더 */
+.catrow{display:flex;align-items:baseline;gap:8px;margin:18px 2px 9px;padding-bottom:7px;border-bottom:2px solid var(--line)}
+.catrow .cname{font-size:15px;font-weight:800;letter-spacing:-.02em;color:var(--ink)}
+.catrow .ctag{font-size:10.5px;font-weight:800;padding:2px 7px;border-radius:20px;background:var(--brand);color:#fff}
+.catrow .ctag.buy{background:var(--sub2)}
+.catrow .csum{margin-left:auto;font-size:13px;font-weight:800;color:var(--brand);font-variant-numeric:tabular-nums;white-space:nowrap}
+.catrow .csum .cneed{color:var(--out)}
+.catrow .csum .cok{color:var(--in)}
 
 .pcard{padding:14px 15px;margin-bottom:10px;display:flex;align-items:center;gap:12px;animation:rise .35s both}
 .pcard .pn{font-weight:700;font-size:15px;letter-spacing:-.02em}
@@ -197,8 +207,8 @@ nav button.sel{color:var(--brand)}
     <b>⚠ 단일 기기 모드</b> — 지금은 이 폰에만 저장됩니다. 두 형제가 실시간으로 같이 보려면 파일 상단 <b>FIREBASE_CONFIG</b>에 설정값을 넣으세요. (설정 방법은 대화 안내 참고)
   </div>
   <div class="stat">
-    <div class="card"><div class="n" id="sTotal">0</div><div class="l">총 품목</div></div>
-    <div class="card"><div class="n" id="sSum">0</div><div class="l">총 재고(EA)</div></div>
+    <div class="card"><div class="n" id="sMade">0</div><div class="l">자체생산 <span class="cu">EA</span></div></div>
+    <div class="card"><div class="n" id="sBuy">0</div><div class="l">맘엔펫 납품 <span class="cu">box</span></div></div>
     <div class="card alert"><div class="n" id="sLow">0</div><div class="l" id="sLowL">보충 필요</div></div>
   </div>
   <div id="lowAlert"></div>
@@ -357,6 +367,13 @@ function unitInfo(name){
   }
   return { unit:'EA', per:0 };
 }
+
+/* 대분류: 맘엔펫 = 납품(매입), 나머지 = 자체생산(주력) */
+const CATS = [
+  { key:'made', label:'자체생산', tag:'주력' },
+  { key:'buy',  label:'맘엔펫 (납품)', tag:'매입' },
+];
+function categoryOf(name){ return name.startsWith('맘엔펫') ? 'buy' : 'made'; }
 
 let state = { products:[], logs:[], user:'형' };
 let type='out', chan='네이버스토어';
@@ -531,37 +548,57 @@ function jumpTo(id){ document.getElementById('mProd').value=id; setType('in'); g
 
 /* ---------- render ---------- */
 function render(){
-  // stock
+  // stock — 대분류(자체생산 / 맘엔펫 납품)로 그룹
   const list=document.getElementById('stockList'); list.innerHTML='';
-  let sum=0, outCnt=0, lowCnt=0;
+  let outCnt=0, lowCnt=0;
   const need=[];   // 보충 필요 목록 (품절 먼저, 그다음 부족)
-  state.products.forEach((p,idx)=>{
-    const u=unitInfo(p.name);
-    const stk=p.stock||0;
-    sum += u.per ? stk*u.per : stk;
-    const min = (p.min!=null)?p.min:LOW;
-    const isOut = stk<=0;
-    const isLow = stk>0 && stk<=min;
-    if(isOut){outCnt++; need.push({p,u,min,out:true});}
-    else if(isLow){lowCnt++; need.push({p,u,min,out:false});}
-    const cls = isOut?' out':(isLow?' low':'');
-    const d=document.createElement('div'); d.className='card pcard'+cls; d.style.animationDelay=(idx*.03)+'s';
-    const boxLine = u.per ? `<div class="pm">1box = ${u.per}ea · 총 ${(stk*u.per).toLocaleString()}ea</div>` : '';
-    const badge = isOut?'<span class="badge-out">품절</span>':(isLow?'<span class="badge-low">재고 부족</span>':'');
-    const minLine = `<div class="pm minrow">적정 ${min}${u.unit}<button class="minedit" onclick="event.stopPropagation();editMin('${p.id}')">수정</button>${badge}</div>`;
-    d.innerHTML=`<div class="pinfo"><div class="pn">${esc(p.name)}</div>${boxLine}${minLine}</div>
-      <div class="stk"><b>${stk}</b><small>${u.unit}</small></div>`;
-    d.onclick=()=>{ document.getElementById('mProd').value=p.id; go('move'); updatePreview(); };
-    list.appendChild(d);
+  const totals={ made:{sum:0,unit:'EA',need:0,count:0}, buy:{sum:0,unit:'box',need:0,count:0} };
+  let animI=0;
+
+  CATS.forEach(cat=>{
+    const items=state.products.filter(p=>categoryOf(p.name)===cat.key);
+    if(!items.length) return;
+    const t=totals[cat.key];
+    const cards=[];
+    items.forEach(p=>{
+      const u=unitInfo(p.name);
+      const stk=p.stock||0;
+      t.sum += stk;                 // 분류 단위(자체생산 EA / 납품 box)로 합산
+      t.count++;
+      const min = (p.min!=null)?p.min:LOW;
+      const isOut = stk<=0;
+      const isLow = stk>0 && stk<=min;
+      if(isOut){outCnt++; t.need++; need.push({p,u,min,out:true});}
+      else if(isLow){lowCnt++; t.need++; need.push({p,u,min,out:false});}
+      const cls = isOut?' out':(isLow?' low':'');
+      const d=document.createElement('div'); d.className='card pcard'+cls; d.style.animationDelay=(animI++*.03)+'s';
+      const boxLine = u.per ? `<div class="pm">1box = ${u.per}ea · 총 ${(stk*u.per).toLocaleString()}ea</div>` : '';
+      const badge = isOut?'<span class="badge-out">품절</span>':(isLow?'<span class="badge-low">재고 부족</span>':'');
+      const minLine = `<div class="pm minrow">적정 ${min}${u.unit}<button class="minedit" onclick="event.stopPropagation();editMin('${p.id}')">수정</button>${badge}</div>`;
+      d.innerHTML=`<div class="pinfo"><div class="pn">${esc(p.name)}</div>${boxLine}${minLine}</div>
+        <div class="stk"><b>${stk}</b><small>${u.unit}</small></div>`;
+      d.onclick=()=>{ document.getElementById('mProd').value=p.id; go('move'); updatePreview(); };
+      cards.push(d);
+    });
+    // 분류 헤더 (이름 + 총재고 + 부족)
+    const head=document.createElement('div'); head.className='catrow';
+    const needTxt = t.need
+      ? `<span class="cneed">부족 ${t.need}</span>`
+      : `<span class="cok">부족 0</span>`;
+    head.innerHTML=`<span class="cname">${cat.label}</span>
+      <span class="ctag ${cat.key==='buy'?'buy':''}">${cat.tag}</span>
+      <span class="csum">총 ${t.sum.toLocaleString()} ${t.unit} · ${needTxt}</span>`;
+    list.appendChild(head);
+    cards.forEach(c=>list.appendChild(c));
   });
   // 품절 먼저 정렬
   need.sort((a,b)=> (b.out-a.out));
 
   const totalNeed = outCnt+lowCnt;
-  document.getElementById('sTotal').textContent=state.products.length;
-  document.getElementById('sSum').textContent=sum.toLocaleString();
-  document.getElementById('sLow').textContent=totalNeed;
-  document.getElementById('sLowL').innerHTML = '보충 필요'+(outCnt?`<small>품절 ${outCnt}</small>`:'');
+  document.getElementById('sMade').textContent = totals.made.sum.toLocaleString();
+  document.getElementById('sBuy').textContent  = totals.buy.sum.toLocaleString();
+  document.getElementById('sLow').textContent  = totalNeed;
+  document.getElementById('sLowL').innerHTML   = '보충 필요'+(outCnt?`<small>품절 ${outCnt}</small>`:'');
 
   // 상단 요약 알림
   const box=document.getElementById('lowAlert');
@@ -584,9 +621,14 @@ function render(){
   const nb=document.getElementById('navBadge');
   if(nb){ nb.textContent=totalNeed; nb.style.display=totalNeed?'block':'none'; }
 
-  // product select
+  // product select (대분류별 optgroup)
   const sel=document.getElementById('mProd'); const cur=sel.value;
-  sel.innerHTML=state.products.map(p=>`<option value="${p.id}">${p.name} (재고 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
+  sel.innerHTML=CATS.map(cat=>{
+    const items=state.products.filter(p=>categoryOf(p.name)===cat.key);
+    if(!items.length) return '';
+    const opts=items.map(p=>`<option value="${p.id}">${p.name} (재고 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
+    return `<optgroup label="${cat.label}">${opts}</optgroup>`;
+  }).join('');
   if(cur) sel.value=cur; updatePreview();
 
   // logs
