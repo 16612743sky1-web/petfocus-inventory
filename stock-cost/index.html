@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#1e293b">
+<title>펫포커스 · 재고/원가 관리</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#f4f6f9;--white:#fff;--border:#e2e8f0;--border2:#cbd5e1;
+  --text:#1e293b;--text2:#475569;--text3:#94a3b8;
+  --blue:#2563eb;--blue-light:#eff6ff;
+  --green:#16a34a;--green-light:#f0fdf4;
+  --orange:#ea580c;--red:#dc2626;--yellow:#d97706;--yellow-light:#fffbeb;
+  --brown:#92400e;--brown-light:#fef3c7;
+  --shadow:0 1px 3px rgba(0,0,0,.08);--radius:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{font-size:16px;}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:76px;}
+.hdr{background:var(--white);border-bottom:1px solid var(--border);padding:14px 16px;position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;}
+.hdr-brand{display:flex;align-items:center;gap:9px;font-size:16px;font-weight:800;}
+.hdr-brand .icon{width:30px;height:30px;background:linear-gradient(135deg,#d97706,#92400e);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.sync-dot{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:5px;font-weight:600;}
+.sync-dot .dot{width:8px;height:8px;border-radius:50%;background:var(--border2);}
+.sync-dot.on .dot{background:var(--green);}
+.sync-dot.err .dot{background:var(--red);}
+.main{padding:14px;max-width:640px;margin:0 auto;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+.card-title{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.card-title .sub{font-size:11px;font-weight:500;color:var(--text3);}
+/* bottom tab bar */
+.tabbar{position:fixed;bottom:0;left:0;right:0;background:var(--white);border-top:1px solid var(--border);display:flex;z-index:100;padding-bottom:env(safe-area-inset-bottom);}
+.tabbar button{flex:1;border:none;background:none;padding:9px 0 7px;font-family:inherit;font-size:10.5px;font-weight:600;color:var(--text3);cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:2px;}
+.tabbar button .ico{font-size:20px;line-height:1;}
+.tabbar button.active{color:var(--blue);}
+.page{display:none;}
+.page.active{display:block;}
+/* stock cards */
+.stock-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+.stock-item{border:1px solid var(--border);border-radius:12px;padding:12px;position:relative;}
+.stock-item .nm{font-size:12px;font-weight:600;color:var(--text2);}
+.stock-item .qty{font-size:22px;font-weight:800;margin-top:4px;}
+.stock-item .qty small{font-size:12px;font-weight:600;color:var(--text3);}
+.stock-item.low{border-color:#fca5a5;background:#fef2f2;}
+.stock-item.low .qty{color:var(--red);}
+.badge{display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;}
+.badge-red{background:#fecaca;color:#7f1d1d;}
+.badge-green{background:#bbf7d0;color:#14532d;}
+.badge-blue{background:#dbeafe;color:#1e3a8a;}
+.badge-orange{background:#fed7aa;color:#7c2d12;}
+.badge-gray{background:#f1f5f9;color:var(--text2);}
+.badge-brown{background:var(--brown-light);color:var(--brown);}
+.fin-hero{background:linear-gradient(135deg,#1e293b,#334155);border-radius:var(--radius);padding:18px;color:#fff;margin-bottom:12px;}
+.fin-hero .lb{font-size:12px;opacity:.75;font-weight:600;}
+.fin-hero .v{font-size:32px;font-weight:800;margin-top:2px;}
+.fin-hero .v small{font-size:15px;font-weight:600;opacity:.8;}
+.fin-hero .row2{display:flex;gap:18px;margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.15);}
+.fin-hero .row2 .lb{font-size:11px;}
+.fin-hero .row2 .v2{font-size:16px;font-weight:700;margin-top:1px;}
+/* forms */
+label.f{display:block;font-size:12px;font-weight:600;color:var(--text2);margin:12px 0 5px;}
+label.f:first-child{margin-top:0;}
+input.f,select.f,textarea.f{width:100%;border:1px solid var(--border2);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:16px;color:var(--text);background:var(--white);}
+input.f:focus,select.f:focus{outline:2px solid var(--blue);border-color:var(--blue);}
+.frow{display:flex;gap:8px;}
+.frow>div{flex:1;}
+.seg{display:flex;background:#eef1f5;border-radius:11px;padding:3px;gap:3px;margin-bottom:14px;}
+.seg button{flex:1;border:none;background:none;border-radius:9px;padding:9px 0;font-family:inherit;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;}
+.seg button.active{background:var(--white);color:var(--text);box-shadow:var(--shadow);}
+.btn{border:none;border-radius:11px;cursor:pointer;font-family:inherit;font-weight:700;transition:opacity .15s;}
+.btn:active{opacity:.75;}
+.btn-primary{background:var(--blue);color:#fff;width:100%;padding:14px;font-size:15px;margin-top:16px;}
+.btn-ghost{background:var(--white);border:1px solid var(--border2);color:var(--text2);padding:9px 14px;font-size:13px;}
+.btn-danger{background:#fef2f2;border:1px solid #fca5a5;color:var(--red);padding:9px 14px;font-size:13px;}
+.preview{background:var(--blue-light);border:1px solid #bfdbfe;border-radius:11px;padding:12px;margin-top:14px;font-size:13px;}
+.preview .pr-row{display:flex;justify-content:space-between;padding:3px 0;color:var(--text2);}
+.preview .pr-row b{color:var(--text);font-weight:700;}
+.preview .pr-total{border-top:1px dashed #93c5fd;margin-top:6px;padding-top:8px;font-size:14px;}
+.preview .pr-total b{color:var(--blue);font-size:17px;}
+/* record list */
+.rec{display:flex;align-items:center;gap:10px;padding:11px 2px;border-bottom:1px solid #f1f5f9;}
+.rec:last-child{border-bottom:none;}
+.rec .ico{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0;}
+.rec .body{flex:1;min-width:0;}
+.rec .t1{font-size:13.5px;font-weight:700;}
+.rec .t2{font-size:11.5px;color:var(--text3);margin-top:1px;}
+.rec .amt{text-align:right;flex-shrink:0;}
+.rec .amt .a1{font-size:14px;font-weight:800;}
+.rec .amt .a2{font-size:10.5px;color:var(--text3);}
+.rec .del{border:none;background:none;color:var(--text3);font-size:16px;cursor:pointer;padding:6px 2px 6px 8px;}
+.empty{text-align:center;padding:28px 10px;color:var(--text3);font-size:13px;}
+.month-nav{display:flex;align-items:center;justify-content:center;gap:14px;margin-bottom:12px;}
+.month-nav b{font-size:15px;min-width:110px;text-align:center;}
+.month-nav button{border:1px solid var(--border2);background:var(--white);border-radius:9px;width:34px;height:34px;font-size:15px;cursor:pointer;color:var(--text2);}
+.sum-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;}
+.sum-item{background:var(--white);border:1px solid var(--border);border-radius:11px;padding:11px 12px;}
+.sum-item .lb{font-size:10.5px;font-weight:700;color:var(--text3);}
+.sum-item .v{font-size:16px;font-weight:800;margin-top:3px;}
+.sum-item .v.green{color:var(--green);}.sum-item .v.red{color:var(--red);}.sum-item .v.blue{color:var(--blue);}
+.note{font-size:11.5px;color:var(--text3);line-height:1.6;margin-top:8px;}
+.settings-row{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 0;border-bottom:1px solid #f1f5f9;}
+.settings-row:last-child{border-bottom:none;}
+.settings-row .lb{font-size:13px;font-weight:600;color:var(--text2);flex-shrink:0;}
+.settings-row input{width:120px;text-align:right;border:1px solid var(--border2);border-radius:9px;padding:8px 10px;font-family:inherit;font-size:15px;}
+.toast{position:fixed;bottom:88px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.who-seg{display:flex;gap:6px;margin-bottom:14px;}
+.who-seg button{flex:1;border:1.5px solid var(--border2);background:var(--white);border-radius:10px;padding:9px 0;font-family:inherit;font-size:13px;font-weight:700;color:var(--text3);cursor:pointer;}
+.who-seg button.active{border-color:var(--blue);color:var(--blue);background:var(--blue-light);}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-brand"><div class="icon">🦴</div>펫포커스 재고관리</div>
+  <div class="sync-dot" id="syncDot"><span class="dot"></span><span id="syncTxt">로컬 저장</span></div>
+</header>
+
+<div class="main">
+
+<!-- ═══════ 재고 현황 ═══════ -->
+<div class="page active" id="page-stock">
+  <div class="fin-hero">
+    <div class="lb">완제품 재고 (우피껌)</div>
+    <div class="v" id="hFinished">0<small> 개</small></div>
+    <div class="row2">
+      <div><div class="lb">평균 개당 원가</div><div class="v2" id="hUnitCost">-</div></div>
+      <div><div class="lb">이번 달 판매</div><div class="v2" id="hMonthSales">0개</div></div>
+      <div><div class="lb">재고 원가액</div><div class="v2" id="hStockValue">-</div></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">원재료 재고 <span class="sub">기준치 미만은 빨간색</span></div>
+    <div class="stock-grid" id="matGrid"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">최근 기록 <span class="sub">최근 5건</span></div>
+    <div id="recentList"></div>
+  </div>
+</div>
+
+<!-- ═══════ 입력 ═══════ -->
+<div class="page" id="page-input">
+  <div class="who-seg" id="whoSeg"></div>
+  <div class="seg" id="typeSeg">
+    <button data-t="매입" class="active">매입</button>
+    <button data-t="생산">생산</button>
+    <button data-t="판매">판매</button>
+    <button data-t="조정">조정</button>
+  </div>
+
+  <!-- 매입 -->
+  <div class="card" id="form-매입">
+    <label class="f">품목</label>
+    <select class="f" id="buyItem" onchange="fillBuyPrice()">
+      <option value="woopi">우피 (원물) — kg</option>
+      <option value="vinegar">식초 (세척용) — L</option>
+      <option value="stick">스틱 (심재) — 개</option>
+      <option value="pack">포장지/라벨 — 세트</option>
+    </select>
+    <div class="frow">
+      <div><label class="f">수량</label><input class="f" id="buyQty" type="number" inputmode="decimal" placeholder="0" oninput="prevBuy()"></div>
+      <div><label class="f">단가 (원)</label><input class="f" id="buyPrice" type="number" inputmode="numeric" oninput="prevBuy()"></div>
+    </div>
+    <label class="f">증빙 종류 <span style="color:var(--red)">*부가세 공제용</span></label>
+    <select class="f" id="buyProof">
+      <option>전자세금계산서</option><option>사업자 카드</option><option>현금영수증(지출증빙)</option><option>계산서(면세)</option><option>간이영수증</option><option>증빙 없음 ⚠️</option>
+    </select>
+    <label class="f">메모 (거래처 등)</label>
+    <input class="f" id="buyMemo" placeholder="예: OO축산, 카드결제">
+    <div class="preview" id="buyPrev" style="display:none"></div>
+    <button class="btn btn-primary" onclick="saveBuy()">매입 저장</button>
+  </div>
+
+  <!-- 생산 -->
+  <div class="card" id="form-생산" style="display:none">
+    <div class="frow">
+      <div><label class="f">우피 투입 (kg)</label><input class="f" id="pWoopi" type="number" inputmode="decimal" placeholder="0" oninput="prevProd()"></div>
+      <div><label class="f">식초 사용 (L)</label><input class="f" id="pVinegar" type="number" inputmode="decimal" placeholder="0" oninput="prevProd()"></div>
+    </div>
+    <div class="frow">
+      <div><label class="f">스틱 사용 (개)</label><input class="f" id="pStick" type="number" inputmode="numeric" placeholder="0" oninput="prevProd()"></div>
+      <div><label class="f">포장지 사용 (세트)</label><input class="f" id="pPack" type="number" inputmode="numeric" placeholder="0" oninput="prevProd()"></div>
+    </div>
+    <div class="frow">
+      <div><label class="f">건조 시간 (h)</label><input class="f" id="pDry" type="number" inputmode="decimal" value="12" oninput="prevProd()"></div>
+      <div><label class="f">작업 인시 (인×시간)</label><input class="f" id="pLabor" type="number" inputmode="decimal" placeholder="0" oninput="prevProd()"></div>
+    </div>
+    <div class="frow">
+      <div><label class="f">완성 수량 (개)</label><input class="f" id="pOut" type="number" inputmode="numeric" placeholder="0" oninput="prevProd()"></div>
+      <div><label class="f">완성 중량 (kg, 선택)</label><input class="f" id="pOutKg" type="number" inputmode="decimal" placeholder="수율 계산용" oninput="prevProd()"></div>
+    </div>
+    <label class="f">메모</label>
+    <input class="f" id="pMemo" placeholder="예: 3차 배치, 건조기 2호">
+    <div class="preview" id="prodPrev" style="display:none"></div>
+    <button class="btn btn-primary" onclick="saveProd()">생산 기록 저장</button>
+  </div>
+
+  <!-- 판매 -->
+  <div class="card" id="form-판매" style="display:none">
+    <label class="f">판매 채널</label>
+    <select class="f" id="sChan" onchange="fillFee()">
+      <option data-fee="0">자사몰/직거래</option>
+      <option data-fee="6">네이버 스마트스토어</option>
+      <option data-fee="11">쿠팡</option>
+      <option data-fee="0">B2B 도매</option>
+      <option data-fee="0">기타</option>
+    </select>
+    <div class="frow">
+      <div><label class="f">수량 (개)</label><input class="f" id="sQty" type="number" inputmode="numeric" placeholder="0" oninput="prevSale()"></div>
+      <div><label class="f">개당 판매가 (원)</label><input class="f" id="sPrice" type="number" inputmode="numeric" placeholder="0" oninput="prevSale()"></div>
+    </div>
+    <label class="f">채널 수수료율 (%)</label>
+    <input class="f" id="sFee" type="number" inputmode="decimal" value="0" oninput="prevSale()">
+    <label class="f">메모 (주문번호/거래처)</label>
+    <input class="f" id="sMemo" placeholder="예: B2B OO펫샵 50개">
+    <div class="preview" id="salePrev" style="display:none"></div>
+    <button class="btn btn-primary" onclick="saveSale()">판매 저장</button>
+  </div>
+
+  <!-- 조정 -->
+  <div class="card" id="form-조정" style="display:none">
+    <label class="f">대상</label>
+    <select class="f" id="aTarget">
+      <option value="woopi">우피 (kg)</option>
+      <option value="vinegar">식초 (L)</option>
+      <option value="stick">스틱 (개)</option>
+      <option value="pack">포장지 (세트)</option>
+      <option value="finished">완제품 우피껌 (개)</option>
+    </select>
+    <label class="f">증감 수량 (감소는 음수, 예: -3)</label>
+    <input class="f" id="aQty" type="number" inputmode="decimal" placeholder="0">
+    <label class="f">사유 (필수)</label>
+    <input class="f" id="aMemo" placeholder="예: 실사 차이, 불량 폐기, 시식 증정">
+    <div class="note">⚠️ 폐기/증정도 반드시 기록해야 실제 수율과 원가가 맞습니다.</div>
+    <button class="btn btn-primary" onclick="saveAdj()">조정 저장</button>
+  </div>
+</div>
+
+<!-- ═══════ 기록 ═══════ -->
+<div class="page" id="page-log">
+  <div class="month-nav">
+    <button onclick="moveMonth(-1)">‹</button><b id="monthLabel"></b><button onclick="moveMonth(1)">›</button>
+  </div>
+  <div class="sum-grid" id="monthSum"></div>
+  <div class="card"><div id="logList"></div></div>
+</div>
+
+<!-- ═══════ 계산 ═══════ -->
+<div class="page" id="page-calc">
+  <div class="card">
+    <div class="card-title">원가 시뮬레이터 <span class="sub">저장 안 됨 · 계산 전용</span></div>
+    <div class="frow">
+      <div><label class="f">우피 (kg)</label><input class="f" id="cWoopi" type="number" inputmode="decimal" value="10" oninput="calcSim()"></div>
+      <div><label class="f">식초 (L)</label><input class="f" id="cVinegar" type="number" inputmode="decimal" value="2" oninput="calcSim()"></div>
+    </div>
+    <div class="frow">
+      <div><label class="f">스틱 (개)</label><input class="f" id="cStick" type="number" inputmode="numeric" value="50" oninput="calcSim()"></div>
+      <div><label class="f">포장 (세트)</label><input class="f" id="cPack" type="number" inputmode="numeric" value="50" oninput="calcSim()"></div>
+    </div>
+    <div class="frow">
+      <div><label class="f">건조 (h)</label><input class="f" id="cDry" type="number" inputmode="decimal" value="12" oninput="calcSim()"></div>
+      <div><label class="f">인시 (인×h)</label><input class="f" id="cLabor" type="number" inputmode="decimal" value="4" oninput="calcSim()"></div>
+    </div>
+    <div class="frow">
+      <div><label class="f">완성 수량 (개)</label><input class="f" id="cOut" type="number" inputmode="numeric" value="50" oninput="calcSim()"></div>
+      <div><label class="f">목표 마진율 (%)</label><input class="f" id="cMargin" type="number" inputmode="numeric" value="50" oninput="calcSim()"></div>
+    </div>
+    <div class="preview" id="simResult"></div>
+    <div class="note">· 권장 B2C가 = 개당원가 ÷ (1 − 목표마진율). VAT 별도 기준.<br>· B2B 공급가는 B2C가의 60~70% 수준에서 개당원가를 확보하는지 확인하세요.</div>
+  </div>
+</div>
+
+<!-- ═══════ 설정 ═══════ -->
+<div class="page" id="page-set">
+  <div class="card">
+    <div class="card-title">기준 단가 <span class="sub">원가 계산에 사용</span></div>
+    <div id="priceRows"></div>
+    <button class="btn btn-primary" onclick="saveSettings()">단가 저장</button>
+  </div>
+  <div class="card">
+    <div class="card-title">재고 알림 기준치 <span class="sub">미만이면 빨간 표시</span></div>
+    <div id="thRows"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">작성자 이름</div>
+    <div class="frow">
+      <div><input class="f" id="user0"></div>
+      <div><input class="f" id="user1"></div>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">두 기기 동기화 <span class="sub">선택 사항</span></div>
+    <label class="f">동기화 주소 (Firebase Realtime DB URL)</label>
+    <input class="f" id="syncUrl" placeholder="https://xxx.firebaseio.com/petfocus.json">
+    <div class="note">주소를 두 핸드폰에 똑같이 입력하면 저장할 때마다 자동으로 공유됩니다. 비워두면 이 기기에만 저장됩니다. (설정 방법은 저장소의 GUIDELINES.md 참고)</div>
+    <div style="display:flex;gap:8px;margin-top:12px;">
+      <button class="btn btn-ghost" style="flex:1" onclick="saveSettings();manualSync()">지금 동기화</button>
+    </div>
+  </div>
+  <div class="card">
+    <div class="card-title">데이터 백업</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn btn-ghost" onclick="exportData()">파일 내보내기</button>
+      <button class="btn btn-ghost" onclick="document.getElementById('importFile').click()">파일 가져오기</button>
+      <input type="file" id="importFile" accept=".json" style="display:none" onchange="importData(event)">
+      <button class="btn btn-danger" onclick="wipeData()">전체 삭제</button>
+    </div>
+    <div class="note">동기화를 안 쓰는 경우: 주 1회 '파일 내보내기' → 카톡으로 전송 → 상대방이 '가져오기' (기록이 합쳐지며 중복되지 않습니다).</div>
+  </div>
+</div>
+
+</div>
+
+<nav class="tabbar">
+  <button class="active" data-p="stock"><span class="ico">📦</span>재고</button>
+  <button data-p="input"><span class="ico">✏️</span>입력</button>
+  <button data-p="log"><span class="ico">📋</span>기록</button>
+  <button data-p="calc"><span class="ico">🧮</span>계산</button>
+  <button data-p="set"><span class="ico">⚙️</span>설정</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+// ─── 상수 ───
+const MAT = {woopi:{nm:'우피 (원물)',unit:'kg'},vinegar:{nm:'식초 (세척용)',unit:'L'},stick:{nm:'스틱 (심재)',unit:'개'},pack:{nm:'포장지/라벨',unit:'세트'}};
+const PRICE_DEF = {woopi:15000,vinegar:2500,stick:150,pack:450,wage:10000,dryer:500};
+const PRICE_NM = {woopi:'우피 1kg',vinegar:'식초 1L',stick:'스틱 1개',pack:'포장 1세트',wage:'시급 (인건비)',dryer:'건조 전기료 /h'};
+const TH_DEF = {woopi:5,vinegar:2,stick:50,pack:50,finished:20};
+const TH_NM = {woopi:'우피 (kg)',vinegar:'식초 (L)',stick:'스틱 (개)',pack:'포장지 (세트)',finished:'완제품 (개)'};
+const TYPE_META = {매입:{ico:'🛒',bg:'#eff6ff'},생산:{ico:'🏭',bg:'#fef3c7'},판매:{ico:'💰',bg:'#f0fdf4'},조정:{ico:'🔧',bg:'#f1f5f9'}};
+const LS_KEY = 'petfocus_v1';
+
+// ─── 상태 ───
+let state = load();
+let curType = '매입', curWho = 0, viewMonth = ym(new Date());
+
+function defaults(){
+  return {v:1, settings:{prices:{...PRICE_DEF}, thresholds:{...TH_DEF}, users:['사장님','동생'], syncUrl:'', updatedAt:0}, records:[]};
+}
+function load(){
+  try{
+    const raw = localStorage.getItem(LS_KEY);
+    if(!raw) return defaults();
+    const s = JSON.parse(raw);
+    const d = defaults();
+    s.settings = Object.assign(d.settings, s.settings||{});
+    s.settings.prices = Object.assign({...PRICE_DEF}, s.settings.prices||{});
+    s.settings.thresholds = Object.assign({...TH_DEF}, s.settings.thresholds||{});
+    s.records = s.records||[];
+    return s;
+  }catch(e){ return defaults(); }
+}
+function persist(){ localStorage.setItem(LS_KEY, JSON.stringify(state)); autoSync(); }
+
+// ─── 유틸 ───
+const $ = id=>document.getElementById(id);
+const num = id=>parseFloat($(id).value)||0;
+function fmt(n){ return Math.round(n).toLocaleString('ko-KR'); }
+function ym(d){ return d.toISOString().slice(0,7); }
+function today(){ const d=new Date(); return new Date(d.getTime()-d.getTimezoneOffset()*60000).toISOString().slice(0,10); }
+function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,7); }
+function toast(msg){ const t=$('toast'); t.textContent=msg; t.classList.add('show'); clearTimeout(t._h); t._h=setTimeout(()=>t.classList.remove('show'),2200); }
+function addRecord(type, payload){
+  state.records.push({id:uid(), date:today(), ts:Date.now(), updatedAt:Date.now(), who:state.settings.users[curWho]||'', type, ...payload});
+  persist();
+}
+
+// ─── 재고 계산 (기록에서 전량 재계산 — 단일 진실 원천) ───
+function computeStock(){
+  const mat = {woopi:0,vinegar:0,stick:0,pack:0};
+  let finished = 0, prodCost = 0, prodUnits = 0;
+  for(const r of state.records){
+    if(r.deleted) continue;
+    if(r.type==='매입') mat[r.item] += r.qty;
+    else if(r.type==='생산'){
+      mat.woopi -= r.woopi; mat.vinegar -= r.vinegar; mat.stick -= r.stick; mat.pack -= r.pack;
+      finished += r.out; prodCost += r.cost; prodUnits += r.out;
+    }
+    else if(r.type==='판매') finished -= r.qty;
+    else if(r.type==='조정'){ if(r.target==='finished') finished += r.qty; else mat[r.target] += r.qty; }
+  }
+  const unitCost = prodUnits>0 ? prodCost/prodUnits : 0;
+  return {mat, finished, unitCost};
+}
+
+// ─── 생산 원가 ───
+function prodCostOf(w,v,s,pk,dry,labor){
+  const p = state.settings.prices;
+  return {
+    material: w*p.woopi + v*p.vinegar + s*p.stick,
+    pack: pk*p.pack,
+    labor: labor*p.wage,
+    power: dry*p.dryer,
+    get total(){ return this.material+this.pack+this.labor+this.power; }
+  };
+}
+
+// ─── 렌더: 재고 ───
+function renderStock(){
+  const {mat, finished, unitCost} = computeStock();
+  const th = state.settings.thresholds;
+  $('hFinished').innerHTML = fmt(finished)+'<small> 개</small>';
+  $('hUnitCost').textContent = unitCost>0 ? fmt(unitCost)+'원' : '-';
+  $('hStockValue').textContent = unitCost>0 ? fmt(finished*unitCost)+'원' : '-';
+  const m = ym(new Date());
+  const sold = state.records.filter(r=>!r.deleted&&r.type==='판매'&&r.date.startsWith(m)).reduce((a,r)=>a+r.qty,0);
+  $('hMonthSales').textContent = fmt(sold)+'개';
+  $('matGrid').innerHTML = Object.keys(MAT).map(k=>{
+    const low = mat[k] < th[k];
+    return `<div class="stock-item${low?' low':''}"><div class="nm">${MAT[k].nm}${low?' <span class="badge badge-red">부족</span>':''}</div><div class="qty">${(+mat[k].toFixed(2)).toLocaleString('ko-KR')}<small> ${MAT[k].unit}</small></div></div>`;
+  }).join('');
+  const recent = state.records.filter(r=>!r.deleted).sort((a,b)=>b.ts-a.ts).slice(0,5);
+  $('recentList').innerHTML = recent.length? recent.map(r=>recHtml(r,false)).join('') : '<div class="empty">아직 기록이 없습니다.<br>아래 ✏️ 입력 탭에서 시작하세요.</div>';
+}
+
+function recHtml(r, withDel){
+  const meta = TYPE_META[r.type];
+  let t1='', a1='', a2='';
+  if(r.type==='매입'){ t1=`${MAT[r.item].nm} ${r.qty}${MAT[r.item].unit} 매입`; a1='-'+fmt(r.total)+'원'; a2=r.proof||''; }
+  else if(r.type==='생산'){ t1=`생산 ${r.out}개 (우피 ${r.woopi}kg)`; a1=fmt(r.cost)+'원'; a2='개당 '+fmt(r.out>0?r.cost/r.out:0)+'원'; }
+  else if(r.type==='판매'){ t1=`${r.chan} ${r.qty}개 판매`; a1='+'+fmt(r.net)+'원'; a2='수수료 후'; }
+  else { t1=`조정: ${TH_NM[r.target]} ${r.qty>0?'+':''}${r.qty}`; a1=''; a2=r.memo||''; }
+  return `<div class="rec">
+    <div class="ico" style="background:${meta.bg}">${meta.ico}</div>
+    <div class="body"><div class="t1">${t1}</div><div class="t2">${r.date} · ${r.who||'-'}${r.memo&&r.type!=='조정'?' · '+r.memo:''}</div></div>
+    <div class="amt"><div class="a1" style="color:${r.type==='판매'?'var(--green)':r.type==='매입'?'var(--red)':'var(--text)'}">${a1}</div><div class="a2">${a2}</div></div>
+    ${withDel?`<button class="del" onclick="delRec('${r.id}')">✕</button>`:''}
+  </div>`;
+}
+
+// ─── 입력 폼 ───
+function fillBuyPrice(){ $('buyPrice').value = state.settings.prices[$('buyItem').value]; prevBuy(); }
+function prevBuy(){
+  const q=num('buyQty'), p=num('buyPrice');
+  const el=$('buyPrev');
+  if(q<=0||p<=0){ el.style.display='none'; return; }
+  el.style.display='block';
+  el.innerHTML = `<div class="pr-row pr-total"><span>매입 합계 (공급가 기준)</span><b>${fmt(q*p)}원</b></div><div class="pr-row"><span>부가세 포함 시 예상</span><b>${fmt(q*p*1.1)}원</b></div>`;
+}
+function saveBuy(){
+  const q=num('buyQty'), p=num('buyPrice');
+  if(q<=0||p<=0) return toast('수량과 단가를 입력하세요');
+  addRecord('매입', {item:$('buyItem').value, qty:q, price:p, total:q*p, proof:$('buyProof').value, memo:$('buyMemo').value.trim()});
+  $('buyQty').value=''; $('buyMemo').value=''; prevBuy();
+  toast('매입 저장 완료'); renderStock();
+}
+
+function prevProd(){
+  const w=num('pWoopi'),v=num('pVinegar'),s=num('pStick'),pk=num('pPack'),dry=num('pDry'),lb=num('pLabor'),out=num('pOut'),outKg=num('pOutKg');
+  const el=$('prodPrev');
+  if(w<=0&&out<=0){ el.style.display='none'; return; }
+  const c = prodCostOf(w,v,s,pk,dry,lb);
+  const yieldPct = (w>0&&outKg>0)? (outKg/w*100).toFixed(1)+'%' : '- (완성 중량 입력 시)';
+  el.style.display='block';
+  el.innerHTML = `
+    <div class="pr-row"><span>재료비 (우피+식초+스틱)</span><b>${fmt(c.material)}원</b></div>
+    <div class="pr-row"><span>포장비</span><b>${fmt(c.pack)}원</b></div>
+    <div class="pr-row"><span>인건비 (${lb}인시)</span><b>${fmt(c.labor)}원</b></div>
+    <div class="pr-row"><span>건조 전기료 (${dry}h)</span><b>${fmt(c.power)}원</b></div>
+    <div class="pr-row pr-total"><span>배치 총원가</span><b>${fmt(c.total)}원</b></div>
+    <div class="pr-row"><span>개당 원가</span><b>${out>0?fmt(c.total/out)+'원':'-'}</b></div>
+    <div class="pr-row"><span>수율 (완성kg÷투입kg)</span><b>${yieldPct}</b></div>`;
+}
+function saveProd(){
+  const w=num('pWoopi'),v=num('pVinegar'),s=num('pStick'),pk=num('pPack'),dry=num('pDry'),lb=num('pLabor'),out=num('pOut'),outKg=num('pOutKg');
+  if(w<=0||out<=0) return toast('우피 투입량과 완성 수량은 필수입니다');
+  const {mat} = computeStock();
+  if(w>mat.woopi && !confirm(`우피 재고(${mat.woopi.toFixed(1)}kg)보다 많이 투입했습니다. 매입 기록 누락일 수 있습니다. 그래도 저장할까요?`)) return;
+  const c = prodCostOf(w,v,s,pk,dry,lb);
+  addRecord('생산', {woopi:w,vinegar:v,stick:s,pack:pk,dry,labor:lb,out,outKg,cost:c.total,memo:$('pMemo').value.trim()});
+  ['pWoopi','pVinegar','pStick','pPack','pLabor','pOut','pOutKg','pMemo'].forEach(i=>$(i).value='');
+  $('pDry').value=12; prevProd();
+  toast(`생산 저장 · 개당 원가 ${fmt(c.total/out)}원`); renderStock();
+}
+
+function fillFee(){ const o=$('sChan').selectedOptions[0]; $('sFee').value=o.dataset.fee||0; prevSale(); }
+function prevSale(){
+  const q=num('sQty'), p=num('sPrice'), fee=num('sFee');
+  const el=$('salePrev');
+  if(q<=0||p<=0){ el.style.display='none'; return; }
+  const gross=q*p, net=gross*(1-fee/100);
+  const {unitCost}=computeStock();
+  const margin = net - q*unitCost;
+  el.style.display='block';
+  el.innerHTML = `
+    <div class="pr-row"><span>총 매출</span><b>${fmt(gross)}원</b></div>
+    <div class="pr-row"><span>수수료 (${fee}%)</span><b>-${fmt(gross-net)}원</b></div>
+    <div class="pr-row pr-total"><span>순매출 (입금 예상)</span><b>${fmt(net)}원</b></div>
+    ${unitCost>0?`<div class="pr-row"><span>원가 차감 후 한계이익</span><b style="color:${margin>=0?'var(--green)':'var(--red)'}">${fmt(margin)}원 (${net>0?(margin/net*100).toFixed(1):0}%)</b></div>`:''}`;
+}
+function saveSale(){
+  const q=num('sQty'), p=num('sPrice'), fee=num('sFee');
+  if(q<=0||p<=0) return toast('수량과 판매가를 입력하세요');
+  const {finished}=computeStock();
+  if(q>finished && !confirm(`완제품 재고(${finished}개)보다 많습니다. 그래도 저장할까요?`)) return;
+  const gross=q*p, net=gross*(1-fee/100);
+  addRecord('판매', {chan:$('sChan').value, qty:q, price:p, fee, gross, net, memo:$('sMemo').value.trim()});
+  $('sQty').value=''; $('sMemo').value=''; prevSale();
+  toast('판매 저장 완료'); renderStock();
+}
+
+function saveAdj(){
+  const q=num('aQty');
+  if(!q) return toast('증감 수량을 입력하세요');
+  if(!$('aMemo').value.trim()) return toast('조정 사유는 필수입니다');
+  addRecord('조정', {target:$('aTarget').value, qty:q, memo:$('aMemo').value.trim()});
+  $('aQty').value=''; $('aMemo').value='';
+  toast('조정 저장 완료'); renderStock();
+}
+
+// ─── 기록 탭 ───
+function moveMonth(d){
+  const [y,m]=viewMonth.split('-').map(Number);
+  const nd=new Date(y, m-1+d, 1);
+  viewMonth = ym(nd); renderLog();
+}
+function renderLog(){
+  $('monthLabel').textContent = viewMonth.replace('-','년 ')+'월';
+  const rows = state.records.filter(r=>!r.deleted&&r.date.startsWith(viewMonth)).sort((a,b)=>b.ts-a.ts);
+  let buy=0, prodCost=0, prodQty=0, sales=0, net=0, soldQty=0;
+  rows.forEach(r=>{
+    if(r.type==='매입') buy+=r.total;
+    else if(r.type==='생산'){ prodCost+=r.cost; prodQty+=r.out; }
+    else if(r.type==='판매'){ sales+=r.gross; net+=r.net; soldQty+=r.qty; }
+  });
+  const {unitCost}=computeStock();
+  const cogs = soldQty*unitCost;
+  $('monthSum').innerHTML = `
+    <div class="sum-item"><div class="lb">매입액</div><div class="v red">${fmt(buy)}원</div></div>
+    <div class="sum-item"><div class="lb">생산 (${fmt(prodQty)}개)</div><div class="v">${fmt(prodCost)}원</div></div>
+    <div class="sum-item"><div class="lb">순매출 (${fmt(soldQty)}개)</div><div class="v green">${fmt(net)}원</div></div>
+    <div class="sum-item"><div class="lb">한계이익 (순매출-판매원가)</div><div class="v ${net-cogs>=0?'blue':'red'}">${fmt(net-cogs)}원</div></div>`;
+  $('logList').innerHTML = rows.length? rows.map(r=>recHtml(r,true)).join('') : '<div class="empty">이 달의 기록이 없습니다.</div>';
+}
+function delRec(id){
+  const r = state.records.find(x=>x.id===id);
+  if(!r) return;
+  if(!confirm('이 기록을 삭제할까요? 재고 수량에 바로 반영됩니다.')) return;
+  r.deleted = true; r.updatedAt = Date.now();
+  persist(); renderLog(); renderStock(); toast('삭제됨');
+}
+
+// ─── 계산 탭 ───
+function calcSim(){
+  const c = prodCostOf(num('cWoopi'),num('cVinegar'),num('cStick'),num('cPack'),num('cDry'),num('cLabor'));
+  const out = num('cOut'), mg = Math.min(num('cMargin'),95)/100;
+  const unit = out>0? c.total/out : 0;
+  const b2c = mg<1? unit/(1-mg) : 0;
+  $('simResult').innerHTML = `
+    <div class="pr-row"><span>재료비</span><b>${fmt(c.material)}원</b></div>
+    <div class="pr-row"><span>포장비</span><b>${fmt(c.pack)}원</b></div>
+    <div class="pr-row"><span>인건비</span><b>${fmt(c.labor)}원</b></div>
+    <div class="pr-row"><span>전기료</span><b>${fmt(c.power)}원</b></div>
+    <div class="pr-row pr-total"><span>배치 총원가</span><b>${fmt(c.total)}원</b></div>
+    <div class="pr-row"><span>개당 원가</span><b>${out>0?fmt(unit)+'원':'-'}</b></div>
+    <div class="pr-row"><span>권장 B2C가 (마진 ${Math.round(mg*100)}%)</span><b>${out>0?fmt(b2c)+'원':'-'}</b></div>
+    <div class="pr-row"><span>B2B 공급가 참고 (B2C의 65%)</span><b>${out>0?fmt(b2c*0.65)+'원':'-'}</b></div>`;
+}
+
+// ─── 설정 ───
+function renderSettings(){
+  $('priceRows').innerHTML = Object.keys(PRICE_NM).map(k=>
+    `<div class="settings-row"><span class="lb">${PRICE_NM[k]}</span><input type="number" inputmode="numeric" id="pr_${k}" value="${state.settings.prices[k]}"></div>`).join('');
+  $('thRows').innerHTML = Object.keys(TH_NM).map(k=>
+    `<div class="settings-row"><span class="lb">${TH_NM[k]}</span><input type="number" inputmode="decimal" id="th_${k}" value="${state.settings.thresholds[k]}" onchange="saveTh()"></div>`).join('');
+  $('user0').value = state.settings.users[0]||'';
+  $('user1').value = state.settings.users[1]||'';
+  $('syncUrl').value = state.settings.syncUrl||'';
+}
+function saveSettings(){
+  Object.keys(PRICE_NM).forEach(k=>{ state.settings.prices[k] = parseFloat($('pr_'+k).value)||PRICE_DEF[k]; });
+  state.settings.users = [$('user0').value.trim()||'사장님', $('user1').value.trim()||'동생'];
+  state.settings.syncUrl = $('syncUrl').value.trim();
+  state.settings.updatedAt = Date.now();
+  persist(); renderWho(); toast('설정 저장 완료');
+}
+function saveTh(){
+  Object.keys(TH_NM).forEach(k=>{ state.settings.thresholds[k] = parseFloat($('th_'+k).value)||0; });
+  state.settings.updatedAt = Date.now(); persist(); renderStock();
+}
+
+// ─── 동기화 (Firebase RTDB REST 또는 임의 JSON PUT/GET 엔드포인트) ───
+let syncBusy = false;
+function setSyncUI(cls, txt){ const d=$('syncDot'); d.className='sync-dot '+cls; $('syncTxt').textContent=txt; }
+function mergeState(remote){
+  if(!remote) return;
+  const byId = new Map(state.records.map(r=>[r.id,r]));
+  (remote.records||[]).forEach(rr=>{
+    const local = byId.get(rr.id);
+    if(!local) state.records.push(rr);
+    else if((rr.updatedAt||0) > (local.updatedAt||0)) Object.assign(local, rr);
+  });
+  if(remote.settings && (remote.settings.updatedAt||0) > (state.settings.updatedAt||0)){
+    const myUrl = state.settings.syncUrl;
+    state.settings = Object.assign(state.settings, remote.settings);
+    state.settings.syncUrl = myUrl; // 주소는 기기별 유지
+  }
+}
+async function doSync(){
+  const url = state.settings.syncUrl;
+  if(!url || syncBusy) return;
+  syncBusy = true; setSyncUI('','동기화 중…');
+  try{
+    const res = await fetch(url, {cache:'no-store'});
+    if(res.ok){ const remote = await res.json(); mergeState(remote); }
+    const put = await fetch(url, {method:'PUT', headers:{'Content-Type':'application/json'}, body:JSON.stringify({settings:state.settings, records:state.records})});
+    if(!put.ok) throw new Error('PUT '+put.status);
+    localStorage.setItem(LS_KEY, JSON.stringify(state));
+    setSyncUI('on','동기화 완료 '+new Date().toLocaleTimeString('ko-KR',{hour:'2-digit',minute:'2-digit'}));
+    renderStock();
+  }catch(e){
+    setSyncUI('err','동기화 실패');
+  }finally{ syncBusy = false; }
+}
+let syncTimer;
+function autoSync(){ if(!state.settings.syncUrl) return; clearTimeout(syncTimer); syncTimer=setTimeout(doSync, 1500); }
+function manualSync(){
+  if(!state.settings.syncUrl) return toast('동기화 주소를 먼저 입력하세요');
+  doSync().then(()=>toast('동기화 완료'));
+}
+
+// ─── 백업 ───
+function exportData(){
+  const blob = new Blob([JSON.stringify(state,null,1)], {type:'application/json'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `펫포커스_재고백업_${today()}.json`;
+  a.click(); URL.revokeObjectURL(a.href);
+  toast('백업 파일 저장됨');
+}
+function importData(ev){
+  const f = ev.target.files[0]; if(!f) return;
+  const rd = new FileReader();
+  rd.onload = e=>{
+    try{
+      const remote = JSON.parse(e.target.result);
+      if(!remote.records) throw new Error('bad');
+      mergeState(remote);
+      persist(); renderAll();
+      toast('가져오기 완료 (기록 병합됨)');
+    }catch(err){ toast('파일 형식이 올바르지 않습니다'); }
+  };
+  rd.readAsText(f); ev.target.value='';
+}
+function wipeData(){
+  if(!confirm('모든 기록과 설정을 삭제합니다. 되돌릴 수 없습니다. 계속할까요?')) return;
+  if(!confirm('정말로 전체 삭제하시겠습니까? 백업 파일을 먼저 내보내는 것을 권장합니다.')) return;
+  localStorage.removeItem(LS_KEY);
+  state = defaults(); renderAll(); toast('초기화 완료');
+}
+
+// ─── 탭/작성자 ───
+document.querySelectorAll('.tabbar button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('.tabbar button').forEach(x=>x.classList.remove('active'));
+    document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    $('page-'+b.dataset.p).classList.add('active');
+    if(b.dataset.p==='stock') renderStock();
+    if(b.dataset.p==='log'){ viewMonth=ym(new Date()); renderLog(); }
+    if(b.dataset.p==='calc') calcSim();
+    if(b.dataset.p==='set') renderSettings();
+    window.scrollTo(0,0);
+  });
+});
+document.querySelectorAll('#typeSeg button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('#typeSeg button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active'); curType=b.dataset.t;
+    ['매입','생산','판매','조정'].forEach(t=>$('form-'+t).style.display = t===curType?'block':'none');
+  });
+});
+function renderWho(){
+  $('whoSeg').innerHTML = state.settings.users.map((u,i)=>
+    `<button class="${i===curWho?'active':''}" onclick="curWho=${i};renderWho()">✍️ ${u}</button>`).join('');
+}
+
+function renderAll(){ renderStock(); renderWho(); renderSettings(); calcSim(); fillBuyPrice(); }
+renderAll();
+if(state.settings.syncUrl){ doSync(); }
+</script>
+</body>
+</html>
