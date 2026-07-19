@@ -1,0 +1,830 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#92400e">
+<title>펫포커스 · 상세페이지 프롬프트 생성기</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Pretendard:wght@400;500;600;700;800&display=swap');
+:root{
+  --bg:#f4f6f9;--white:#fff;--border:#e2e8f0;--border2:#cbd5e1;
+  --text:#1e293b;--text2:#475569;--text3:#94a3b8;
+  --blue:#2563eb;--blue-light:#eff6ff;
+  --green:#16a34a;--green-light:#f0fdf4;
+  --orange:#ea580c;--red:#dc2626;--yellow:#d97706;--yellow-light:#fffbeb;
+  --brown:#92400e;--brown-light:#fef3c7;
+  --shadow:0 1px 3px rgba(0,0,0,.08);--radius:14px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+html{font-size:16px;}
+body{font-family:'Pretendard',-apple-system,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding-bottom:24px;}
+.hdr{background:var(--white);border-bottom:1px solid var(--border);padding:14px 16px;position:sticky;top:0;z-index:50;display:flex;align-items:center;justify-content:space-between;}
+.hdr-brand{display:flex;align-items:center;gap:9px;font-size:15px;font-weight:800;}
+.hdr-brand .icon{width:30px;height:30px;background:linear-gradient(135deg,#d97706,#92400e);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:15px;}
+.sync-dot{font-size:11px;color:var(--text3);display:flex;align-items:center;gap:5px;font-weight:600;}
+.sync-dot .dot{width:8px;height:8px;border-radius:50%;background:var(--green);}
+.main{padding:14px;max-width:680px;margin:0 auto;}
+.card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius);padding:16px;box-shadow:var(--shadow);margin-bottom:12px;}
+.card-title{font-size:14px;font-weight:700;margin-bottom:12px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.card-title .sub{font-size:11px;font-weight:500;color:var(--text3);}
+
+/* product bar */
+.pbar{background:var(--white);border-bottom:1px solid var(--border);padding:9px 14px;position:sticky;top:57px;z-index:49;display:flex;gap:8px;align-items:center;}
+.pbar select{flex:1;min-width:0;border:1px solid var(--border2);border-radius:10px;padding:9px 10px;font-family:inherit;font-size:14px;font-weight:600;color:var(--text);background:var(--white);}
+.pbar .btn-new{flex-shrink:0;border:none;background:var(--brown);color:#fff;border-radius:10px;padding:9px 12px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer;}
+
+/* step nav */
+.stepnav{display:flex;gap:6px;overflow-x:auto;padding:12px 14px 4px;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.stepnav::-webkit-scrollbar{display:none;}
+.stepnav button{flex-shrink:0;border:1.5px solid var(--border2);background:var(--white);border-radius:20px;padding:8px 13px;font-family:inherit;font-size:12.5px;font-weight:700;color:var(--text3);cursor:pointer;white-space:nowrap;}
+.stepnav button.active{border-color:var(--brown);color:var(--brown);background:var(--brown-light);}
+.stepnav button .n{opacity:.7;font-weight:800;margin-right:3px;}
+
+.page{display:none;}
+.page.active{display:block;}
+
+/* forms */
+label.f{display:block;font-size:12.5px;font-weight:600;color:var(--text2);margin:14px 0 5px;}
+label.f:first-child{margin-top:0;}
+label.f .hint{font-weight:500;color:var(--text3);font-size:11px;margin-left:4px;}
+input.f,select.f,textarea.f{width:100%;border:1px solid var(--border2);border-radius:10px;padding:11px 12px;font-family:inherit;font-size:16px;color:var(--text);background:var(--white);}
+textarea.f{resize:vertical;line-height:1.5;min-height:64px;}
+input.f:focus,select.f:focus,textarea.f:focus{outline:2px solid var(--brown);border-color:var(--brown);}
+.frow{display:flex;gap:8px;}
+.frow>div{flex:1;min-width:0;}
+
+.btn{border:none;border-radius:11px;cursor:pointer;font-family:inherit;font-weight:700;transition:opacity .15s;}
+.btn:active{opacity:.75;}
+.btn-primary{background:var(--brown);color:#fff;width:100%;padding:14px;font-size:15px;margin-top:16px;}
+.btn-ghost{background:var(--white);border:1px solid var(--border2);color:var(--text2);padding:9px 14px;font-size:13px;}
+.btn-danger{background:#fef2f2;border:1px solid #fca5a5;color:var(--red);padding:9px 14px;font-size:13px;}
+
+/* prompt box */
+.pbox{margin-top:14px;border:1px solid #bbf7d0;background:var(--green-light);border-radius:12px;overflow:hidden;}
+.pbox-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:#dcfce7;border-bottom:1px solid #bbf7d0;}
+.pbox-hd .t{font-size:12.5px;font-weight:800;color:#14532d;}
+.pbox-hd .cp{border:none;background:var(--green);color:#fff;border-radius:8px;padding:7px 13px;font-family:inherit;font-size:12.5px;font-weight:700;cursor:pointer;flex-shrink:0;}
+.pbox-hd .cp:active{opacity:.75;}
+.pbox pre{margin:0;padding:12px;font-family:inherit;font-size:12.5px;line-height:1.6;color:var(--text);white-space:pre-wrap;word-break:break-word;max-height:340px;overflow-y:auto;}
+
+.tip{background:var(--yellow-light);border:1px solid #fde68a;border-radius:11px;padding:11px 12px;font-size:12.5px;line-height:1.6;color:#78350f;margin-top:12px;}
+.tip b{font-weight:800;}
+.warn{background:#fef2f2;border:1px solid #fca5a5;border-radius:11px;padding:11px 12px;font-size:12.5px;line-height:1.6;color:#7f1d1d;margin-top:12px;}
+.warn b{font-weight:800;}
+.intro{font-size:12.5px;line-height:1.65;color:var(--text2);margin-bottom:6px;}
+.stepbadge{display:inline-block;background:var(--brown-light);color:var(--brown);font-size:11px;font-weight:800;padding:3px 9px;border-radius:20px;margin-bottom:10px;}
+
+/* feature rows */
+.feat-row{display:flex;gap:7px;margin-bottom:7px;align-items:center;}
+.feat-row input{flex:1;}
+.feat-row .del{flex-shrink:0;border:1px solid var(--border2);background:var(--white);color:var(--text3);border-radius:9px;width:38px;height:40px;font-size:16px;cursor:pointer;}
+.addbtn{border:1px dashed var(--border2);background:var(--white);color:var(--text2);border-radius:10px;padding:9px;font-family:inherit;font-size:13px;font-weight:600;cursor:pointer;width:100%;margin-top:4px;}
+
+.checklist{list-style:none;padding:0;margin:8px 0 0;}
+.checklist li{display:flex;gap:9px;padding:9px 0;border-bottom:1px solid #f1f5f9;font-size:13px;line-height:1.5;color:var(--text2);}
+.checklist li:last-child{border-bottom:none;}
+.checklist li .num{flex-shrink:0;width:22px;height:22px;border-radius:50%;background:var(--brown);color:#fff;font-size:12px;font-weight:800;display:flex;align-items:center;justify-content:center;}
+.checklist li b{color:var(--text);font-weight:700;}
+
+.empty{text-align:center;padding:30px 14px;color:var(--text3);font-size:13px;line-height:1.6;}
+
+/* image manager */
+.dropzone{border:2px dashed var(--border2);border-radius:12px;padding:22px 14px;text-align:center;color:var(--text3);font-size:13px;line-height:1.6;cursor:pointer;background:var(--bg);}
+.dropzone.drag{border-color:var(--brown);background:var(--brown-light);color:var(--brown);}
+.img-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;margin-top:12px;}
+.img-item{border:1px solid var(--border);border-radius:12px;overflow:hidden;background:var(--white);display:flex;flex-direction:column;}
+.img-item img{width:100%;aspect-ratio:1/1;object-fit:cover;display:block;background:#f1f5f9;}
+.img-item .cap{width:100%;border:none;border-top:1px solid var(--border);padding:8px 9px;font-family:inherit;font-size:12px;color:var(--text);}
+.img-item .cap:focus{outline:2px solid var(--brown);}
+.img-item .ctrl{display:flex;border-top:1px solid var(--border);}
+.img-item .ctrl button{flex:1;border:none;background:var(--white);padding:8px 0;font-family:inherit;font-size:12px;font-weight:600;color:var(--text2);cursor:pointer;}
+.img-item .ctrl button+button{border-left:1px solid var(--border);}
+.img-item .ctrl button.rm{color:var(--red);}
+.img-item .ctrl button:active{background:var(--bg);}
+
+.toast{position:fixed;bottom:32px;left:50%;transform:translateX(-50%);background:#1e293b;color:#fff;padding:11px 20px;border-radius:24px;font-size:13px;font-weight:600;z-index:200;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;}
+.toast.show{opacity:1;}
+.savednote{font-size:11px;color:var(--green);font-weight:600;margin-top:8px;}
+.mininote{font-size:11.5px;color:var(--text3);line-height:1.55;margin-top:8px;}
+</style>
+</head>
+<body>
+
+<header class="hdr">
+  <div class="hdr-brand"><div class="icon">📝</div>펫포커스 상세페이지 생성기</div>
+  <div class="sync-dot"><span class="dot"></span>자동 저장</div>
+</header>
+
+<div class="pbar">
+  <select id="prodSel" onchange="selectProduct(this.value)"></select>
+  <button class="btn-new" onclick="newProduct()">+ 새 상품</button>
+</div>
+
+<div class="stepnav" id="stepnav"></div>
+
+<div class="main">
+
+  <!-- STEP 0: 홈 -->
+  <div class="page" id="p0">
+    <div class="card">
+      <div class="card-title">시작하기 <span class="sub">3분이면 첫 상품</span></div>
+      <p class="intro">상품 정보를 넣으면 상세페이지를 만들 <b>AI용 프롬프트</b>가 6단계로 자동으로 나옵니다.
+      이미지를 직접 그리는 게 아니라, 미리클·젠스파크·ChatGPT 같은 AI에 <b>붙여넣을 문장</b>을 만들어줘요.</p>
+      <ul class="checklist">
+        <li><span class="num">1</span><div><b>브랜드·톤·지침</b>은 딱 한 번만 저장 (1·3단계)</div></li>
+        <li><span class="num">2</span><div>신상품이 나오면 <b>제품 정보만</b> 입력 (2단계)</div></li>
+        <li><span class="num">3</span><div>각 단계 <b>[복사]</b> → AI에 붙여넣기 → 상세페이지 완성</div></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">⭐ 이 도구가 꼭 지키는 것</div>
+      <div class="warn"><b>한글 안 깨지게:</b> AI 이미지에 한글을 그려 넣으면 글자가 깨집니다.
+      그래서 <b>이미지엔 글자 없이</b> 만들고, 한글은 미리캔버스·캔바에서 <b>따로 얹습니다.</b> (6단계에서 안내)</div>
+      <div class="tip"><b>AI 티 제거:</b> "혁신적인·완벽한·최고의" 같은 티 나는 표현을 자동으로 금지하고,
+      등록한 <b>브랜드 말투</b>를 유지합니다. 사진은 <b>찍은 사진을 보정</b>하는 걸 먼저 씁니다.</div>
+      <button class="btn btn-primary" onclick="go(1)">시작 — 1단계 브랜드 정보 →</button>
+      <button class="btn btn-ghost" style="width:100%;margin-top:8px" onclick="seedBaby()">🐶 퓨어 베이비 츄잉 불러오기 — 입력 없이 바로 시작</button>
+      <p class="mininote">처음이면 순서대로(1→2→3→4→5→6) 진행하세요. 자세한 설명서는 GUIDELINES.md 참고.</p>
+    </div>
+  </div>
+
+  <!-- STEP 1: 브랜드 -->
+  <div class="page" id="p1">
+    <div class="card">
+      <span class="stepbadge">1단계 · 공통 (한 번만)</span>
+      <div class="card-title">브랜드 정보</div>
+      <p class="intro">우리 브랜드가 어떤 곳인지 AI에게 알려줍니다. 한 번 저장하면 모든 상품에 재사용돼요.</p>
+      <label class="f">브랜드명</label>
+      <input class="f" id="b_name" placeholder="예: 펫포커스" oninput="onBrand()">
+      <label class="f">업종 / 카테고리</label>
+      <input class="f" id="b_industry" placeholder="예: 반려견 수제 간식 (한우 우피껌)" oninput="onBrand()">
+      <label class="f">브랜드 강점 <span class="hint">2~3개, 쉼표로</span></label>
+      <input class="f" id="b_values" placeholder="예: 국내산 한우 우피, 수제 소량생산, 무첨가" oninput="onBrand()">
+      <label class="f">주요 고객</label>
+      <input class="f" id="b_target" placeholder="예: 소형견 보호자, 치석·구취 신경 쓰는 분" oninput="onBrand()">
+      <label class="f">경쟁사 대비 차별점</label>
+      <textarea class="f" id="b_diff" placeholder="예: 대량 생산 수입산과 달리 매일 소량으로 직접 만들고 방부제를 넣지 않음" oninput="onBrand()"></textarea>
+      <label class="f">브랜드 말투 / 톤 <span class="hint">AI 티 제거의 핵심</span></label>
+      <textarea class="f" id="b_tone" placeholder="예: 과장 없이 담백하고 다정한 말투. 보호자에게 친구처럼 설명. 전문용어보다 쉬운 말." oninput="onBrand()"></textarea>
+      <div class="tip"><b>톤 유지 팁:</b> 지금 쓰고 있는 상세페이지가 있으면, 그 문장 몇 개를 위 칸에 붙여넣으세요. AI가 그 말투를 따라 씁니다.</div>
+      <p class="savednote" id="b_saved"></p>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 브랜드 정의 프롬프트</div>
+      <p class="intro">AI에게 제일 먼저 붙여넣어 "우리 브랜드"를 이해시키는 문장입니다.</p>
+      <div class="pbox">
+        <div class="pbox-hd"><span class="t">1단계 프롬프트</span><button class="cp" onclick="copyP('out1')">복사</button></div>
+        <pre id="out1"></pre>
+      </div>
+      <button class="btn btn-primary" onclick="go(2)">다음 — 2단계 제품 정보 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 2: 제품 -->
+  <div class="page" id="p2">
+    <div class="card">
+      <span class="stepbadge">2단계 · 상품별</span>
+      <div class="card-title">제품 정보 <span class="sub" id="p2_prodname"></span></div>
+      <div id="p2_noprod" class="empty" style="display:none">먼저 상단에서 <b>+ 새 상품</b>을 눌러 상품을 만들어주세요.</div>
+      <div id="p2_form">
+        <label class="f">제품명</label>
+        <input class="f" id="pr_name" placeholder="예: 한우 우피껌 스틱 (소형견용)" oninput="onProd()">
+        <label class="f">핵심 원재료 / 성분</label>
+        <textarea class="f" id="pr_ingredients" placeholder="예: 국내산 한우 우피 100%, 식용 식초 소량" oninput="onProd()"></textarea>
+        <div class="frow">
+          <div><label class="f">규격 / 중량 / 개수</label><input class="f" id="pr_spec" placeholder="예: 100g / 20개입" oninput="onProd()"></div>
+          <div><label class="f">가격</label><input class="f" id="pr_price" placeholder="예: 12,900원" oninput="onProd()"></div>
+        </div>
+        <label class="f">특징 / 장점 <span class="hint">한 줄씩</span></label>
+        <div id="featList"></div>
+        <button class="addbtn" onclick="addFeat()">+ 특징 추가</button>
+        <label class="f">급여 방법</label>
+        <textarea class="f" id="pr_feeding" placeholder="예: 하루 1~2개. 처음엔 잘게 잘라 지켜보며 급여." oninput="onProd()"></textarea>
+        <label class="f">주의사항</label>
+        <textarea class="f" id="pr_caution" placeholder="예: 급여 중 신선한 물을 함께 제공. 알레르기 있는 반려견은 소량부터." oninput="onProd()"></textarea>
+        <label class="f">넣고 싶은 사진 콘셉트 <span class="hint">선택</span></label>
+        <input class="f" id="pr_photo" placeholder="예: 소형견이 우피껌 물고 있는 컷, 성분 클로즈업" oninput="onProd()">
+        <label class="f">이 상품 전용 섹션 구성 <span class="hint">선택 — 비우면 3단계 공통 사용</span></label>
+        <textarea class="f" id="pr_sections" placeholder="예: 1. 첫 화면  2. 문제 공감  3. 왜 이 제품인가 … (이 상품만 다른 구성을 쓸 때)" oninput="onProd()"></textarea>
+        <div class="frow" style="margin-top:14px;gap:8px">
+          <button class="btn btn-danger" style="flex:1" onclick="deleteProduct()">이 상품 삭제</button>
+        </div>
+        <p class="savednote" id="pr_saved"></p>
+      </div>
+    </div>
+    <div class="card" id="p2_out">
+      <div class="card-title">📋 제품 정보 프롬프트</div>
+      <div class="pbox">
+        <div class="pbox-hd"><span class="t">2단계 프롬프트</span><button class="cp" onclick="copyP('out2')">복사</button></div>
+        <pre id="out2"></pre>
+      </div>
+      <button class="btn btn-primary" onclick="go(3)">다음 — 3단계 지침 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 3: 지침 -->
+  <div class="page" id="p3">
+    <div class="card">
+      <span class="stepbadge">3단계 · 공통 (한 번만)</span>
+      <div class="card-title">상세페이지 지침 <span class="sub">규칙</span></div>
+      <p class="intro">상세페이지가 지켜야 할 규칙입니다. 기본값이 채워져 있으니 필요할 때만 고치세요.</p>
+      <label class="f">기존 상세페이지 톤앤매너 <span class="hint">유지 원칙 — 상품 부분만 교체</span></label>
+      <textarea class="f" id="g_tonemanner" style="min-height:110px" oninput="onGuide()"></textarea>
+      <div class="tip"><b>한 번만 저장하면</b> 모든 상품의 텍스트·이미지 프롬프트에 "이 톤앤매너를 유지하고 상품 부분만 교체하라"는 지시가 자동으로 들어갑니다.</div>
+      <label class="f">섹션 순서 <span class="hint">신생 브랜드 신뢰 우선 기본값</span></label>
+      <textarea class="f" id="g_sections" oninput="onGuide()"></textarea>
+      <label class="f">쓰지 말 표현 <span class="hint">AI 티 + 과장</span></label>
+      <textarea class="f" id="g_forbidden" oninput="onGuide()"></textarea>
+      <label class="f">추가 규칙 <span class="hint">선택</span></label>
+      <textarea class="f" id="g_extra" placeholder="예: 문장은 짧게. 존댓말. 이모지 최소." oninput="onGuide()"></textarea>
+      <button class="btn btn-ghost" style="width:100%;margin-top:12px" onclick="resetGuide()">기본값으로 되돌리기</button>
+      <p class="savednote" id="g_saved"></p>
+    </div>
+    <div class="card">
+      <div class="card-title">📋 지침 프롬프트</div>
+      <div class="pbox">
+        <div class="pbox-hd"><span class="t">3단계 프롬프트</span><button class="cp" onclick="copyP('out3')">복사</button></div>
+        <pre id="out3"></pre>
+      </div>
+      <button class="btn btn-primary" onclick="go(4)">다음 — 4단계 텍스트 구성 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 4: 텍스트 구성 -->
+  <div class="page" id="p4">
+    <div class="card">
+      <span class="stepbadge">4단계 · 핵심</span>
+      <div class="card-title">텍스트 구성 먼저 확정</div>
+      <div class="tip"><b>왜 글부터?</b> 디자인·이미지를 먼저 만들면 나중에 글 바꿀 때 다 다시 해야 합니다.
+      <b>텍스트를 먼저 확정</b>하면 재작업이 없어요. (외주 수정비 = 0)</div>
+      <p class="intro" style="margin-top:12px">아래 프롬프트를 AI에 붙여넣으면 섹션별 헤드라인·본문을 뽑아줍니다.
+      1~3단계 내용이 자동으로 합쳐져 있어요.</p>
+      <div class="pbox">
+        <div class="pbox-hd"><span class="t">4단계 · 통합 프롬프트</span><button class="cp" onclick="copyP('out4')">복사</button></div>
+        <pre id="out4"></pre>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">✏️ 수정 요청 프롬프트 <span class="sub">무료·무제한</span></div>
+      <p class="intro">AI 결과가 맘에 안 들면, 바꿀 부분만 적어 아래를 복사해 붙여넣으세요. 몇 번을 고쳐도 비용 0.</p>
+      <textarea class="f" id="fixReq" placeholder="예: 두 번째 섹션을 더 짧게, 3번 문장은 우리 말투로 다시" oninput="renderFix()"></textarea>
+      <div class="pbox">
+        <div class="pbox-hd"><span class="t">수정 프롬프트</span><button class="cp" onclick="copyP('outFix')">복사</button></div>
+        <pre id="outFix"></pre>
+      </div>
+      <button class="btn btn-primary" onclick="go(5)">다음 — 5단계 이미지 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 5: 이미지 -->
+  <div class="page" id="p5">
+    <div class="card">
+      <span class="stepbadge">5단계 · 이미지</span>
+      <div class="card-title">이미지 프롬프트</div>
+      <div class="warn"><b>한글은 넣지 않습니다.</b> 모든 이미지 프롬프트에 "글자 없이 생성"이 들어 있어요.
+      한글은 6단계에서 따로 얹습니다.</div>
+      <label class="f">색감 콘셉트 <span class="hint">상품별 저장 — 바꾸면 아래 프롬프트가 다시 생성돼요</span></label>
+      <select class="f" id="pr_palette" onchange="onPalette()">
+        <option value="mint">크림·베이지 + 연한 민트 (추천 — 퍼피 라인·크라프트 패키지)</option>
+        <option value="sky">기존 톤 그대로 — 하늘색 커버 + 옐로우·크림</option>
+      </select>
+      <p class="mininote">최종 결정자 비교용: 한 가지로 확정하지 말고 두 색감으로 각각 프롬프트를 복사해 결과물을 나란히 보여주세요.</p>
+    </div>
+    <div class="card">
+      <div class="card-title">📷 이미지 삽입 <span class="sub" id="imgProdName"></span></div>
+      <p class="intro">상세페이지에 쓸 사진을 <b>이 화면에서 바로</b> 넣으세요. 넣은 뒤에도 <b>설명 수정 · 순서 이동 · 교체 · 삭제</b>가 됩니다. 상품별로 이 기기에 자동 저장돼요.</p>
+      <div id="img_noprod" class="empty" style="display:none">먼저 상단에서 <b>+ 새 상품</b>을 만들어주세요.</div>
+      <div id="img_area">
+        <div class="dropzone" id="dropzone">📷 눌러서 사진 선택 <b>또는 여기로 드래그</b><br>
+        <span style="font-size:11px">여러 장 가능 · 용량은 자동으로 줄여서 저장</span></div>
+        <input type="file" id="imgFile" accept="image/*" multiple style="display:none">
+        <input type="file" id="imgReplaceFile" accept="image/*" style="display:none">
+        <div class="img-grid" id="imgGrid"></div>
+        <p class="mininote">사진 아래 칸에 용도를 적어두세요 (예: 대표컷, 성분 클로즈업). ◀ ▶ 로 순서를 바꿉니다.</p>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">A. 촬영본 살리기 <span class="sub">1순위 · AI 티 최소</span></div>
+      <p class="intro">전문 장비 없이 찍은 사진을 AI로 보정합니다. <b>image-to-image</b>(사진 올리고 이 프롬프트) 방식.</p>
+      <div class="pbox">
+        <div class="pbox-hd"><span class="t">촬영본 보정 프롬프트</span><button class="cp" onclick="copyP('out5a')">복사</button></div>
+        <pre id="out5a"></pre>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">B. AI 실사 생성 <span class="sub">못 찍는 컷</span></div>
+      <p class="intro">직접 찍기 힘든 장면(급여 컷·무드컷)을 새로 생성합니다.</p>
+      <div class="pbox">
+        <div class="pbox-hd"><span class="t">실사 생성 프롬프트</span><button class="cp" onclick="copyP('out5b')">복사</button></div>
+        <pre id="out5b"></pre>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">C. 상세페이지 조합</div>
+      <p class="intro">위 사진들을 세로로 긴 상세페이지로 조합합니다. <b>글자 자리는 비워둡니다.</b></p>
+      <div class="pbox">
+        <div class="pbox-hd"><span class="t">상세페이지 생성 프롬프트</span><button class="cp" onclick="copyP('out5c')">복사</button></div>
+        <pre id="out5c"></pre>
+      </div>
+      <button class="btn btn-primary" onclick="go(6)">다음 — 6단계 제작·한글 얹기 →</button>
+    </div>
+  </div>
+
+  <!-- STEP 6: 제작 -->
+  <div class="page" id="p6">
+    <div class="card">
+      <span class="stepbadge">6단계 · 제작</span>
+      <div class="card-title">제작 순서 & 한글 얹기</div>
+      <ul class="checklist">
+        <li><span class="num">1</span><div><b>1~3단계 프롬프트</b>를 AI(ChatGPT 등)에 순서대로 붙여넣어 브랜드·제품·규칙을 이해시킴</div></li>
+        <li><span class="num">2</span><div><b>4단계 프롬프트</b>로 상세페이지 <b>글(텍스트)부터</b> 완성 → 맘에 들 때까지 수정 프롬프트로 다듬기</div></li>
+        <li><span class="num">3</span><div><b>5-A</b>로 찍은 사진 보정, <b>5-B</b>로 못 찍는 컷 생성 <b>(모두 글자 없이)</b></div></li>
+        <li><span class="num">4</span><div><b>5-C</b>로 세로 상세페이지 이미지 조합 — 글자 자리는 빈 채로</div></li>
+        <li><span class="num">5</span><div><b>미리캔버스/캔바</b>에 그 이미지를 올리고, 4단계에서 만든 <b>한글 카피를 글자로 얹기</b></div></li>
+        <li><span class="num">6</span><div>PNG/JPG로 내보내 <b>쿠팡에 업로드</b></div></li>
+      </ul>
+    </div>
+    <div class="card">
+      <div class="card-title">🈷️ 한글 안 깨지게 얹는 법</div>
+      <div class="warn"><b>절대 규칙:</b> AI가 만든 이미지 안의 글자는 깨집니다. 이미지엔 <b>글자를 넣지 말고</b>,
+      한글은 반드시 <b>미리캔버스·캔바·파워포인트</b>에서 텍스트로 얹으세요.</div>
+      <ul class="checklist">
+        <li><span class="num">1</span><div>미리캔버스(무료) 접속 → <b>새 디자인 · 상세페이지</b> 크기 선택</div></li>
+        <li><span class="num">2</span><div>5-C로 만든 <b>글자 없는 이미지</b>를 배경으로 업로드</div></li>
+        <li><span class="num">3</span><div><b>텍스트 추가</b> → 4단계 카피를 섹션 위치에 붙여넣기</div></li>
+        <li><span class="num">4</span><div>폰트는 <b>Pretendard·프리텐다드·나눔스퀘어·G마켓산스</b> 등 또렷한 한글 폰트</div></li>
+        <li><span class="num">5</span><div>제목 크게·본문 작게, 줄맞춤 정렬 → <b>다운로드(PNG)</b></div></li>
+      </ul>
+      <div class="tip"><b>팁:</b> 이렇게 하면 한글이 100% 선명하게 나오고, 나중에 글자만 고치기도 쉽습니다.</div>
+    </div>
+    <div class="card">
+      <div class="card-title">🚫 AI 티 마지막 점검</div>
+      <ul class="checklist">
+        <li><span class="num">✓</span><div>"혁신적·완벽·최고·특별한" 같은 <b>클리셰</b>가 남아있지 않은지</div></li>
+        <li><span class="num">✓</span><div>문장이 다 <b>비슷한 길이</b>로 반복되지 않는지 (길고 짧게 섞기)</div></li>
+        <li><span class="num">✓</span><div>사진 속 <b>발가락·글자·로고</b>가 이상하지 않은지</div></li>
+        <li><span class="num">✓</span><div>효능을 <b>단정</b>(치석 제거됩니다 등)하지 않았는지 — 표시광고 주의</div></li>
+      </ul>
+    </div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+'use strict';
+const KEY='petfocus_detail_v1';
+const DEF_SECTIONS='1. 후킹(첫 문장으로 시선 잡기)\n2. 문제제기(보호자의 고민)\n3. 해결(우리 제품이 왜 답인지)\n4. 성분 근거/출처\n5. 신뢰요소(수제·소량생산·원산지·무첨가)\n6. 급여 방법\n7. 주의사항\n8. 브랜드 스토리(왜 만들었나)\n9. FAQ / 배송·교환';
+const DEF_FORBIDDEN='혁신적인, 완벽한, 최고의, 특별한, 놀라운, 지금 바로, 경험해보세요, 후회하지 않습니다, 국내 유일, No.1';
+const DEF_TONEMANNER='- 말투: 과장 없이 다정한 존댓말 ("~해 주세요", "~있어요"). 효능 단정 금지.\n'+
+  '- 구성 패턴: 메인 커버(큰 타이틀 + 실제 사진 + 뱃지 4개) → "Check Point" 라벨 + ✔ 체크리스트 → 차별점/무첨가 → 보호자 공감 인용구 → 실제 제품 사진(원물→손질→건조) → 크기·중량 안내 → 일일 권장 급여량 표 → ※ 유의사항 각주\n'+
+  '- 분위기: 여백 많고 실제 제품 사진 중심. 과한 아이콘·장식 금지.\n'+
+  '- 판매: 모든 제품 단품 판매(세트 없음). 용량은 추가될 수 있으니 특정 용량을 단정하지 않기.';
+const PALETTES={
+  mint:'크림·아이보리·베이지·브라운 배경 + 연한 민트 포인트 (크라프트 종이 패키지와 어울리는 따뜻한 톤)',
+  sky:'하늘색 메인 커버 + 옐로우·크림 섹션 배경 (기존 상세페이지와 동일한 톤)'
+};
+
+function blankState(){
+  return {
+    brand:{name:'',industry:'',values:'',target:'',diff:'',tone:''},
+    guidelines:{sections:DEF_SECTIONS,forbidden:DEF_FORBIDDEN,extra:'',tonemanner:DEF_TONEMANNER},
+    products:[],
+    currentId:null
+  };
+}
+function load(){
+  try{
+    const raw=localStorage.getItem(KEY);
+    if(!raw) return blankState();
+    const s=JSON.parse(raw);
+    if(!s.brand) s.brand=blankState().brand;
+    if(!s.guidelines) s.guidelines=blankState().guidelines;
+    if(!s.guidelines.tonemanner) s.guidelines.tonemanner=DEF_TONEMANNER;
+    if(!Array.isArray(s.products)) s.products=[];
+    return s;
+  }catch(e){ return blankState(); }
+}
+function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
+let state=load();
+
+function curProd(){ return state.products.find(p=>p.id===state.currentId && !p.deleted)||null; }
+function uid(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
+
+function toast(m){ const t=document.getElementById('toast'); t.textContent=m; t.classList.add('show'); clearTimeout(t._t); t._t=setTimeout(()=>t.classList.remove('show'),1600); }
+
+/* ---- navigation ---- */
+const STEPS=[['홈',''],['브랜드','1'],['제품','2'],['지침','3'],['구성','4'],['이미지','5'],['제작','6']];
+let curStep=0;
+function buildNav(){
+  const nav=document.getElementById('stepnav'); nav.innerHTML='';
+  STEPS.forEach((s,i)=>{
+    const b=document.createElement('button');
+    b.innerHTML=(s[1]?'<span class="n">'+s[1]+'</span>':'')+s[0];
+    b.onclick=()=>go(i);
+    nav.appendChild(b);
+  });
+}
+function go(i){
+  curStep=i;
+  document.querySelectorAll('.page').forEach((p,idx)=>p.classList.toggle('active',idx===i));
+  document.querySelectorAll('#stepnav button').forEach((b,idx)=>b.classList.toggle('active',idx===i));
+  window.scrollTo(0,0);
+  renderAll();
+}
+
+/* ---- product management ---- */
+function renderProdSel(){
+  const sel=document.getElementById('prodSel');
+  const list=state.products.filter(p=>!p.deleted);
+  if(list.length===0){ sel.innerHTML='<option value="">상품 없음 — 새 상품을 만드세요</option>'; return; }
+  sel.innerHTML=list.map(p=>'<option value="'+p.id+'"'+(p.id===state.currentId?' selected':'')+'>'+escapeHtml(p.name||'(이름 없음)')+'</option>').join('');
+}
+function selectProduct(id){ state.currentId=id||null; save(); fillProdForm(); renderAll(); }
+function newProduct(){
+  const p={id:uid(),name:'',ingredients:'',spec:'',price:'',features:[''],feeding:'',caution:'',photo:'',sections:'',palette:'mint',images:[],updatedAt:Date.now(),deleted:false};
+  state.products.push(p); state.currentId=p.id; save();
+  renderProdSel(); fillProdForm(); go(2); toast('새 상품을 만들었어요');
+}
+function deleteProduct(){
+  const p=curProd(); if(!p) return;
+  if(!confirm('이 상품을 삭제할까요?')) return;
+  p.deleted=true; p.updatedAt=Date.now();
+  const next=state.products.find(x=>!x.deleted);
+  state.currentId=next?next.id:null; save();
+  renderProdSel(); fillProdForm(); renderAll(); toast('삭제했어요');
+}
+
+/* ---- form <-> state ---- */
+function fillBrandForm(){
+  const b=state.brand;
+  v('b_name',b.name);v('b_industry',b.industry);v('b_values',b.values);
+  v('b_target',b.target);v('b_diff',b.diff);v('b_tone',b.tone);
+}
+function onBrand(){
+  const b=state.brand;
+  b.name=g('b_name');b.industry=g('b_industry');b.values=g('b_values');
+  b.target=g('b_target');b.diff=g('b_diff');b.tone=g('b_tone');
+  save(); document.getElementById('b_saved').textContent='저장됨 ✓'; renderAll();
+}
+function fillGuideForm(){
+  const gd=state.guidelines;
+  v('g_tonemanner',gd.tonemanner||DEF_TONEMANNER);
+  v('g_sections',gd.sections);v('g_forbidden',gd.forbidden);v('g_extra',gd.extra||'');
+}
+function onGuide(){
+  const gd=state.guidelines;
+  gd.tonemanner=g('g_tonemanner');
+  gd.sections=g('g_sections');gd.forbidden=g('g_forbidden');gd.extra=g('g_extra');
+  save(); document.getElementById('g_saved').textContent='저장됨 ✓'; renderAll();
+}
+function resetGuide(){
+  state.guidelines.sections=DEF_SECTIONS; state.guidelines.forbidden=DEF_FORBIDDEN; state.guidelines.extra='';
+  state.guidelines.tonemanner=DEF_TONEMANNER;
+  save(); fillGuideForm(); renderAll(); toast('기본값으로 되돌렸어요');
+}
+function fillProdForm(){
+  const p=curProd();
+  const hasP=!!p;
+  document.getElementById('p2_form').style.display=hasP?'block':'none';
+  document.getElementById('p2_noprod').style.display=hasP?'none':'block';
+  document.getElementById('p2_out').style.display=hasP?'block':'none';
+  document.getElementById('p2_prodname').textContent=hasP?(p.name||'(이름 없음)'):'';
+  renderImages();
+  if(!hasP) return;
+  v('pr_name',p.name);v('pr_ingredients',p.ingredients);v('pr_spec',p.spec);
+  v('pr_price',p.price);v('pr_feeding',p.feeding);v('pr_caution',p.caution);v('pr_photo',p.photo);
+  v('pr_sections',p.sections||'');
+  const pal=document.getElementById('pr_palette'); if(pal) pal.value=p.palette||'mint';
+  renderFeat();
+}
+function onProd(){
+  const p=curProd(); if(!p) return;
+  p.name=g('pr_name');p.ingredients=g('pr_ingredients');p.spec=g('pr_spec');
+  p.price=g('pr_price');p.feeding=g('pr_feeding');p.caution=g('pr_caution');p.photo=g('pr_photo');
+  p.sections=g('pr_sections');
+  p.updatedAt=Date.now(); save();
+  document.getElementById('pr_saved').textContent='저장됨 ✓';
+  document.getElementById('p2_prodname').textContent=p.name||'(이름 없음)';
+  renderProdSel(); renderAll();
+}
+function renderFeat(){
+  const p=curProd(); if(!p) return;
+  if(!Array.isArray(p.features)||p.features.length===0) p.features=[''];
+  const box=document.getElementById('featList'); box.innerHTML='';
+  p.features.forEach((f,i)=>{
+    const row=document.createElement('div'); row.className='feat-row';
+    const inp=document.createElement('input'); inp.className='f'; inp.value=f;
+    inp.placeholder='특징 '+(i+1);
+    inp.oninput=()=>{ p.features[i]=inp.value; p.updatedAt=Date.now(); save(); renderAll(); };
+    const del=document.createElement('button'); del.className='del'; del.textContent='×';
+    del.onclick=()=>{ p.features.splice(i,1); if(p.features.length===0)p.features=['']; save(); renderFeat(); renderAll(); };
+    row.appendChild(inp); row.appendChild(del); box.appendChild(row);
+  });
+}
+function addFeat(){ const p=curProd(); if(!p)return; p.features.push(''); save(); renderFeat(); }
+function onPalette(){
+  const p=curProd();
+  const sel=document.getElementById('pr_palette');
+  if(!p){ toast('먼저 상품을 만들어주세요'); sel.value='mint'; return; }
+  p.palette=sel.value; p.updatedAt=Date.now(); save(); renderAll();
+  toast('색감을 바꿨어요 — 프롬프트 다시 복사하세요');
+}
+
+/* ---- 예시 상품 불러오기 (퓨어 베이비 츄잉) ---- */
+function seedBaby(){
+  const b=state.brand;
+  if(!b.name && !b.industry && !b.values){
+    b.name='펫포커스';
+    b.industry='반려견 수제 간식 (한우 우피껌 전문)';
+    b.values='100% 국내산 한우 우피, 수제 소량생산, 무첨가·무방부제';
+    b.target='반려견 보호자 (퍼피~성견), 첨가물이 걱정되는 분';
+    b.diff='대량 생산 수입산과 달리 국내에서 소량으로 직접 만들고, 표백제·발색제·방부제를 쓰지 않음. 원물 그대로 저온 건조.';
+    b.tone='과장 없이 담백하고 다정한 존댓말. "~해 주세요", "~있어요"처럼 보호자에게 친구처럼 설명. 효능을 단정하지 않음.';
+  }
+  const exist=state.products.find(p=>!p.deleted && p.name==='퓨어 베이비 츄잉');
+  if(exist){
+    state.currentId=exist.id; save();
+    renderProdSel(); fillBrandForm(); fillProdForm(); go(2);
+    toast('이미 있어요 — 그 상품을 선택했어요'); return;
+  }
+  const p={id:uid(),name:'퓨어 베이비 츄잉',
+    ingredients:'100% 국내산 한우 우피 (무첨가·무방부제·색소/향미제 무첨가)',
+    spec:'5~6cm 미니 사이즈 / 35g·200g 단품 판매 (용량은 추가될 수 있음)',
+    price:'',
+    features:[
+      '4개월 이상 퍼피 전용 — 우리 아이가 처음 만나는 한우 우피껌',
+      '퍼피 입 크기에 맞춘 5~6cm 미니 사이즈 (성견용을 잘라 주는 것과 다름)',
+      '원재료 단 하나, 국내산 한우 우피 — 불필요한 것은 넣지 않음',
+      '몇 입에 끝나는 간식과 달리 한참 붙잡고 씹으며 이갈이 스트레스 해소',
+      '원물 → 손질 → 건조, 국내 3단계 생산'
+    ],
+    feeding:'하루 1~2개. 충분한 물과 함께, 보호자가 지켜보며 급여. 남은 제품은 밀봉 보관.',
+    caution:'오래 씹는 제품이라 항상 보호자의 관찰 아래 급여. 삼킬 만큼 작아진 조각은 회수. 씹는 시간은 개체별로 차이가 있음.',
+    photo:'크림톤 배경, 아기 강아지가 앞발로 잡고 씹는 컷, 한우 원물과 우피껌, 손바닥 위 5~6cm 크기 비교컷, 35g·200g 두 용량 나란히',
+    sections:'1. 첫 화면 — 우리 아이가 처음 만나는 한우 우피껌\n2. 문제 공감 — 이런 고민 있으셨나요?\n3. 왜 베이비 전용인가 — 5~6cm 미니 (안전 급여 안내 포함)\n4. 차별점 — 원재료 단 하나, 무첨가\n5. 믿고 먹일 수 있는 이유 — 표백·발색제 없이 원물 그대로\n6. 얼마나 들어있나요 — 35g 맛보기 / 200g 넉넉히\n7. 이런 아이에게 추천합니다\n8. 급여방법 (표)\n9. 자주 묻는 질문 — 안전 불안 해소\n10. 마지막 — 처음이라, 더 좋은 것을 선택하세요 (35g부터 시작 안내)',
+    palette:'mint',
+    images:[],updatedAt:Date.now(),deleted:false};
+  state.products.push(p); state.currentId=p.id; save();
+  renderProdSel(); fillBrandForm(); fillGuideForm(); fillProdForm(); go(2);
+  toast('퓨어 베이비 츄잉을 불러왔어요 ✓');
+}
+
+/* ---- image manager (5단계) ---- */
+let replaceTargetId=null;
+
+function trySave(rollback){
+  try{ save(); return true; }
+  catch(e){ if(rollback)rollback(); toast('저장 공간이 부족해요 — 안 쓰는 사진을 삭제해주세요'); return false; }
+}
+function fileToDataURL(file,maxDim,cb){
+  const url=URL.createObjectURL(file);
+  const img=new Image();
+  img.onload=()=>{
+    let w=img.width,h=img.height;
+    const sc=Math.min(1,maxDim/Math.max(w,h));
+    w=Math.round(w*sc); h=Math.round(h*sc);
+    const c=document.createElement('canvas'); c.width=w; c.height=h;
+    c.getContext('2d').drawImage(img,0,0,w,h);
+    URL.revokeObjectURL(url);
+    cb(c.toDataURL('image/jpeg',0.8));
+  };
+  img.onerror=()=>{ URL.revokeObjectURL(url); toast('이미지를 읽지 못했어요'); };
+  img.src=url;
+}
+function addImages(files){
+  const p=curProd(); if(!p){ toast('먼저 상품을 만들어주세요'); return; }
+  if(!Array.isArray(p.images)) p.images=[];
+  const list=Array.from(files).filter(f=>f.type.startsWith('image/'));
+  if(!list.length){ toast('이미지 파일이 아니에요'); return; }
+  list.forEach(f=>{
+    fileToDataURL(f,900,src=>{
+      const item={id:uid(),src:src,caption:''};
+      p.images.push(item); p.updatedAt=Date.now();
+      if(trySave(()=>{ p.images.pop(); })) { renderImages(); toast('사진을 넣었어요 ✓'); }
+    });
+  });
+}
+function replaceImage(imgId){
+  replaceTargetId=imgId;
+  document.getElementById('imgReplaceFile').click();
+}
+function deleteImage(imgId){
+  const p=curProd(); if(!p)return;
+  if(!confirm('이 사진을 삭제할까요?')) return;
+  p.images=p.images.filter(x=>x.id!==imgId); p.updatedAt=Date.now();
+  save(); renderImages(); toast('삭제했어요');
+}
+function moveImage(imgId,dir){
+  const p=curProd(); if(!p)return;
+  const i=p.images.findIndex(x=>x.id===imgId);
+  const j=i+dir;
+  if(i<0||j<0||j>=p.images.length) return;
+  const t=p.images[i]; p.images[i]=p.images[j]; p.images[j]=t;
+  p.updatedAt=Date.now(); save(); renderImages();
+}
+function renderImages(){
+  const p=curProd();
+  const hasP=!!p;
+  const area=document.getElementById('img_area');
+  const noprod=document.getElementById('img_noprod');
+  if(!area) return;
+  area.style.display=hasP?'block':'none';
+  noprod.style.display=hasP?'none':'block';
+  document.getElementById('imgProdName').textContent=hasP?(p.name||'(이름 없음)'):'';
+  if(!hasP) return;
+  if(!Array.isArray(p.images)) p.images=[];
+  const grid=document.getElementById('imgGrid'); grid.innerHTML='';
+  p.images.forEach(item=>{
+    const box=document.createElement('div'); box.className='img-item';
+    const im=document.createElement('img'); im.src=item.src; im.alt=item.caption||'삽입한 사진';
+    const cap=document.createElement('input'); cap.className='cap'; cap.value=item.caption||'';
+    cap.placeholder='사진 설명 (예: 대표컷)';
+    cap.oninput=()=>{ item.caption=cap.value; p.updatedAt=Date.now(); save(); };
+    const ctrl=document.createElement('div'); ctrl.className='ctrl';
+    const mk=(txt,fn,cls)=>{ const b=document.createElement('button'); b.textContent=txt; if(cls)b.className=cls; b.onclick=fn; return b; };
+    ctrl.appendChild(mk('◀',()=>moveImage(item.id,-1)));
+    ctrl.appendChild(mk('교체',()=>replaceImage(item.id)));
+    ctrl.appendChild(mk('삭제',()=>deleteImage(item.id),'rm'));
+    ctrl.appendChild(mk('▶',()=>moveImage(item.id,1)));
+    box.appendChild(im); box.appendChild(cap); box.appendChild(ctrl);
+    grid.appendChild(box);
+  });
+}
+function initImageUI(){
+  const dz=document.getElementById('dropzone');
+  const fi=document.getElementById('imgFile');
+  const rf=document.getElementById('imgReplaceFile');
+  if(!dz) return;
+  dz.onclick=()=>fi.click();
+  fi.onchange=()=>{ if(fi.files.length) addImages(fi.files); fi.value=''; };
+  rf.onchange=()=>{
+    const p=curProd();
+    if(rf.files.length&&p&&replaceTargetId){
+      const item=p.images.find(x=>x.id===replaceTargetId);
+      if(item){
+        fileToDataURL(rf.files[0],900,src=>{
+          const old=item.src; item.src=src; p.updatedAt=Date.now();
+          if(trySave(()=>{ item.src=old; })) { renderImages(); toast('교체했어요 ✓'); }
+        });
+      }
+    }
+    rf.value=''; replaceTargetId=null;
+  };
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); dz.classList.add('drag'); }));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{ e.preventDefault(); dz.classList.remove('drag'); }));
+  dz.addEventListener('drop',e=>{ if(e.dataTransfer&&e.dataTransfer.files.length) addImages(e.dataTransfer.files); });
+}
+
+/* ---- helpers ---- */
+function g(id){ return document.getElementById(id).value.trim(); }
+function v(id,val){ const el=document.getElementById(id); if(el) el.value=val||''; }
+function escapeHtml(s){ return (s||'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c])); }
+function ph(val,fallback){ return (val&&val.trim())?val.trim():fallback; }
+
+/* ---- prompt builders ---- */
+function brandBlock(){
+  const b=state.brand;
+  return '[브랜드]\n'+
+    '- 이름: '+ph(b.name,'(브랜드명 미입력)')+'\n'+
+    '- 업종/카테고리: '+ph(b.industry,'(미입력)')+'\n'+
+    '- 강점: '+ph(b.values,'(미입력)')+'\n'+
+    '- 주요 고객: '+ph(b.target,'(미입력)')+'\n'+
+    '- 차별점: '+ph(b.diff,'(미입력)')+'\n'+
+    '- 브랜드 말투/톤: '+ph(b.tone,'(미입력)');
+}
+function antiAiRules(){
+  const gd=state.guidelines;
+  let s='[반드시 지킬 규칙]\n'+
+    '- 아래 표현은 절대 쓰지 마 (AI 티 + 과장): '+ph(gd.forbidden,DEF_FORBIDDEN)+'\n'+
+    '- 문장 길이를 다양하게 섞어라(짧은 문장과 긴 문장). 같은 리듬 반복 금지.\n'+
+    '- 이모지는 최소한만. 구체적인 수치·감각(식감, 냄새, 크기)을 넣어 사실적으로.\n'+
+    '- 위 브랜드의 "말투/톤"을 그대로 유지해라.\n'+
+    '- 질병 치료/예방을 단정하지 마 (예: "치석이 제거됩니다"처럼 효능 단정 금지). 사실 위주로.';
+  if(gd.extra&&gd.extra.trim()) s+='\n- '+gd.extra.trim();
+  return s;
+}
+function prodBlock(){
+  const p=curProd();
+  if(!p) return '[제품 정보]\n(상품을 선택하거나 새로 만들어주세요)';
+  const feats=(p.features||[]).filter(x=>x&&x.trim());
+  let f=feats.length?feats.map((x,i)=>'  '+(i+1)+'. '+x.trim()).join('\n'):'  (미입력)';
+  return '[제품 정보]\n'+
+    '- 제품명: '+ph(p.name,'(미입력)')+'\n'+
+    '- 핵심 원재료/성분: '+ph(p.ingredients,'(미입력)')+'\n'+
+    '- 규격/중량/개수: '+ph(p.spec,'(미입력)')+'\n'+
+    '- 가격: '+ph(p.price,'(미입력)')+'\n'+
+    '- 특징/장점:\n'+f+'\n'+
+    '- 급여 방법: '+ph(p.feeding,'(미입력)')+'\n'+
+    '- 주의사항: '+ph(p.caution,'(미입력)');
+}
+function curSections(){
+  const p=curProd();
+  if(p && p.sections && p.sections.trim()) return p.sections.trim();
+  return ph(state.guidelines.sections,DEF_SECTIONS);
+}
+function sectionsBlock(){ return '[상세페이지 섹션 순서]\n'+curSections(); }
+function toneBlock(){
+  return '[기존 상세페이지 톤앤매너 — 그대로 유지]\n'+ph(state.guidelines.tonemanner,DEF_TONEMANNER)+'\n'+
+    '★ 구성·말투·분위기는 위 톤앤매너를 유지하고, 상품 관련 내용(제품명·사진·수치·타깃 설명)만 이번 제품으로 교체해라.';
+}
+function paletteDesc(){
+  const p=curProd();
+  return PALETTES[(p&&p.palette)||'mint']||PALETTES.mint;
+}
+
+function build1(){
+  return '너는 반려동물 간식 브랜드의 상세페이지 카피라이터야. 아래 브랜드를 이해하고, 앞으로 내가 요청할 상세페이지 카피를 이 브랜드의 톤으로 써줘.\n\n'+
+    brandBlock()+'\n\n'+
+    '먼저 이 브랜드를 두세 문장으로 정의하고, 이 브랜드다운 문장을 쓰기 위한 톤 규칙 3가지를 제안해줘. (아직 상세페이지는 쓰지 마)';
+}
+function build2(){
+  return '아래는 이번에 상세페이지를 만들 제품이야.\n\n'+
+    prodBlock()+'\n\n'+
+    '이 제품 정보를 앞서 정의한 브랜드 톤으로 상세페이지에 쓰기 좋게 정리해줘. 과장이나 효능 단정 없이 사실 기반으로.';
+}
+function build3(){
+  return '앞으로 상세페이지를 쓸 때 아래 규칙을 반드시 지켜줘.\n\n'+
+    sectionsBlock()+'\n\n'+
+    toneBlock()+'\n\n'+
+    antiAiRules();
+}
+function build4(){
+  return '지금까지의 브랜드·제품·규칙을 모두 반영해서, 상세페이지 "텍스트"를 먼저 완성해줘. (디자인/이미지보다 글을 먼저 확정한다)\n\n'+
+    brandBlock()+'\n\n'+prodBlock()+'\n\n'+sectionsBlock()+'\n\n'+toneBlock()+'\n\n'+antiAiRules()+'\n\n'+
+    '[출력 형식] — 섹션마다 아래처럼:\n'+
+    '■ 섹션명\n- 헤드라인(한 줄):\n- 본문(2~4문장):\n- 넣을 사진(한 줄 설명):\n\n'+
+    '[아주 중요] 이 텍스트는 나중에 이미지 "위에 글자 레이어"로 얹을 거야. 그러니 이미지 안에 글자가 들어간다고 가정하지 말고, 순수 텍스트만 깔끔하게 써줘.';
+}
+function buildFix(){
+  const req=g('fixReq');
+  return '방금 만든 상세페이지 텍스트에서 아래 부분만 수정해줘. 나머지는 그대로 두고, 브랜드 말투와 규칙은 유지해줘.\n\n'+
+    '[수정 요청]\n'+ph(req,'(여기에 바꿀 내용을 적으세요)');
+}
+function build5a(){
+  return '[촬영본 보정 — image-to-image]\n내가 올린 제품 사진을 자연스럽게 보정해줘. 새로 그리지 말고 원본 제품을 그대로 살려.\n'+
+    '- 배경: 깔끔한 단색 또는 연한 배경으로 정리(누끼 느낌)\n'+
+    '- 밝기·화이트밸런스 자연스럽게. 채도를 과하게 올리지 마.\n'+
+    '- 실제 촬영한 질감 유지. 플라스틱처럼 매끈하게 만들지 마.\n'+
+    '- ★ 이미지 안에 어떤 글자(한글/영문/숫자)도 넣지 마.\n'+
+    '용도: 상세페이지 대표 제품컷.';
+}
+function build5b(){
+  const p=curProd();
+  const concept=p&&p.photo?p.photo:'제품을 사용하는 자연스러운 장면';
+  return '[삽입용 실사 이미지 생성] (400자 이내)\n'+
+    '장면: '+concept+'\n'+
+    '스타일: 실사 사진, 자연광, 과하지 않은 채도, 광고 티 안 나는 일상적인 느낌.\n'+
+    '색감: '+paletteDesc()+'\n'+
+    '비율: 세로(상세페이지용).\n'+
+    '금지: 이미지 안 글자, 이상한 발가락/손, 과도한 보정, 플라스틱 질감.';
+}
+function build5c(){
+  return '[상세페이지 이미지 조합]\n앞서 만든 사진들로 세로로 긴 상세페이지 이미지를 만들어줘.\n'+
+    '- 섹션 순서:\n'+curSections()+'\n'+
+    '- 색감: '+paletteDesc()+'\n'+
+    '- 기존 상세페이지 톤앤매너 유지 (여백 많게, 실제 제품 사진 중심):\n'+ph(state.guidelines.tonemanner,DEF_TONEMANNER)+'\n'+
+    '- ★ 이미지에는 글자를 절대 넣지 마. 한글은 내가 따로 얹을 거야. 글자가 들어갈 자리는 여백으로 비워둬.';
+}
+
+/* ---- render ---- */
+function setPre(id,txt){ const el=document.getElementById(id); if(el) el.textContent=txt; }
+function renderFix(){ setPre('outFix',buildFix()); }
+function renderAll(){
+  setPre('out1',build1());
+  setPre('out2',build2());
+  setPre('out3',build3());
+  setPre('out4',build4());
+  setPre('out5a',build5a());
+  setPre('out5b',build5b());
+  setPre('out5c',build5c());
+  renderFix();
+}
+
+function copyP(id){
+  const txt=document.getElementById(id).textContent;
+  if(navigator.clipboard&&navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(()=>toast('복사됐어요 ✓'),()=>fallbackCopy(txt));
+  }else fallbackCopy(txt);
+}
+function fallbackCopy(txt){
+  const ta=document.createElement('textarea'); ta.value=txt;
+  ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+  ta.select();
+  try{ document.execCommand('copy'); toast('복사됐어요 ✓'); }catch(e){ toast('복사 실패 — 길게 눌러 복사하세요'); }
+  document.body.removeChild(ta);
+}
+
+/* ---- init ---- */
+buildNav();
+initImageUI();
+renderProdSel();
+if(!state.currentId){ const f=state.products.find(p=>!p.deleted); if(f)state.currentId=f.id; }
+fillBrandForm(); fillGuideForm(); fillProdForm();
+renderAll();
+go(0);
+</script>
+</body>
+</html>
