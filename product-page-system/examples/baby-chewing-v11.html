@@ -1,19 +1,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>퓨어 베이비 츄잉 — 상세페이지 v10 (민트 · 큰 글씨)</title>
+<title>퓨어 베이비 츄잉 — 상세페이지 v11 (세이지·크라프트 / 강아지 컷 보강)</title>
 <style>
   :root{
-    --bg:#faf7f1; --card:#ffffff;
-    --green:#0A8478; --green-d:#065F57; --green-soft:#E0F9F7;
-    --coral:#ff7a5c; --coral-d:#f2593a; --coral-soft:#fdeee6;
+    --bg:#FAF6EC; --card:#ffffff;
+    --green:#4A7458; --green-d:#2F4A38; --green-soft:#EBF2EA;
+    --coral:#C9705A; --coral-d:#A8462F; --coral-soft:#F8EBE4;
     --sky:#e9f1f8; --butter:#fdf4d8; --lav:#efeaf8; --pink:#fbe6e6;
     --kraft:#b98f5e;
-    --ink:#302c26; --sub:#5f5b52; --line:#ece4d6; --gold:#f5a623;
+    --ink:#302c26; --sub:#5f5b52; --line:#E9E0CE; --gold:#f5a623;
     --sh:0 10px 26px rgba(60,50,30,.08);
   }
   *{box-sizing:border-box;-webkit-text-size-adjust:100%}
   p,td,.t,.a,.lead,.sub,.note,.fnote,.rsrc,.honest,.who,.m,.meta{font-weight:500}
-  body{margin:0;background:#e6e2da;color:var(--ink);line-height:1.72;word-break:keep-all;overflow-wrap:break-word;font-weight:500;
+  body{margin:0;background:#E4DED0;color:var(--ink);line-height:1.72;word-break:keep-all;overflow-wrap:break-word;font-weight:500;
     font-family:'Pretendard',-apple-system,BlinkMacSystemFont,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;-webkit-font-smoothing:antialiased}
   .wrap{max-width:500px;margin:0 auto;background:var(--bg);overflow:hidden;position:relative}
   .sec{padding:52px 24px}
@@ -40,20 +40,20 @@
   .hero-img{margin:22px auto 0;max-width:300px;background:#fff;border-radius:24px;padding:14px;box-shadow:var(--sh)}
   .hero-img img{border-radius:14px}
   .trustchips{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin-top:22px}
-  .tchip{background:#fff;border:1px solid var(--green-soft);color:var(--green);font-weight:800;font-size:16.8px;padding:8px 13px;border-radius:10px;box-shadow:0 3px 8px rgba(13,148,136,.08)}
+  .tchip{background:#fff;border:1px solid var(--green-soft);color:var(--green);font-weight:800;font-size:16.8px;padding:8px 13px;border-radius:10px;box-shadow:0 3px 8px rgba(74,116,88,.08)}
 
   /* 혜택 바 */
-  .benefit{background:var(--coral-soft);border-top:1px solid #f6d9cd;border-bottom:1px solid #f6d9cd;display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;font-size:18.6px;font-weight:800;color:var(--coral-d)}
+  .benefit{background:var(--coral-soft);border-top:1px solid #EFDACE;border-bottom:1px solid #EFDACE;display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;font-size:18.6px;font-weight:800;color:var(--coral-d)}
   .benefit .dot{width:6px;height:6px;border-radius:50%;background:var(--coral)}
 
   /* WHY 3초 차별화 */
-  .why{background:var(--green-d);color:#E3FAF8;text-align:center}
-  .why .eyebrow{color:#82E6DE}
+  .why{background:var(--green-d);color:#F0F5EE;text-align:center}
+  .why .eyebrow{color:#AFC8B4}
   .why h2{font-size:27.5px;color:#fff;line-height:1.4;margin-top:10px}
   .why-grid{margin-top:28px;display:grid;grid-template-columns:1fr 1fr 1fr;gap:12px}
   .why-card{background:rgba(255,255,255,.08);border-radius:16px;padding:20px 8px}
   .why-card .n{font-size:27.6px;font-weight:800;color:#fff;letter-spacing:-1px}
-  .why-card .t{font-size:15.6px;color:#9FEAE4;margin-top:6px;line-height:1.4}
+  .why-card .t{font-size:15.6px;color:#BED4C1;margin-top:6px;line-height:1.4}
 
   /* 공감 문제 */
   .pain{background:var(--sky)}
@@ -92,8 +92,8 @@
   .stage p{font-size:19.2px;color:#7a6230;margin-top:10px;line-height:1.8}
   .stage p b{color:#5a4410}
   .near{margin-top:18px;background:var(--green);color:#fff;border-radius:18px;padding:20px;font-size:19.8px;font-weight:800;line-height:1.65;text-align:center}
-  .near span{color:#ffd9c9}
-  .near .sub{display:block;font-size:16.2px;font-weight:600;color:#B8F0EC;margin-top:8px;line-height:1.7}
+  .near span{color:#F2CFBC}
+  .near .sub{display:block;font-size:16.2px;font-weight:600;color:#D3E3D5;margin-top:8px;line-height:1.7}
 
   /* 무첨가 */
   .free{background:var(--card);text-align:center}
@@ -114,11 +114,11 @@
   .size .facts .row{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);font-size:18.6px}
   .size .facts .row:last-child{border-bottom:none}
   .size .facts .row .k{color:var(--sub)} .size .facts .row .v{font-weight:700}
-  .feedtable{width:100%;border-collapse:collapse;margin-top:18px;font-size:16.2px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 5px 12px rgba(13,148,136,.06)}
+  .feedtable{width:100%;border-collapse:collapse;margin-top:18px;font-size:16.2px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 5px 12px rgba(74,116,88,.06)}
   .feedtable th,.feedtable td{border:1px solid var(--line);padding:10px 4px;text-align:center}
   .feedtable th{background:var(--green-soft);color:var(--green);font-weight:800}
   .fnote{margin-top:14px;font-size:15.6px;color:var(--sub);line-height:1.8}
-  .feedtable .rh{background:#EDFCFB;color:var(--green);font-weight:800;font-size:15.5px;white-space:nowrap}
+  .feedtable .rh{background:#F5F9F3;color:var(--green);font-weight:800;font-size:15.5px;white-space:nowrap}
 
   /* 후기 */
   .reviews{background:var(--pink)}
@@ -132,6 +132,20 @@
   .rcard .who{font-weight:800;font-size:17.4px}
   .rcard .s{color:var(--gold);font-size:15.5px}
   .rcard p{margin:8px 0 0;font-size:18.6px;color:#5f574c;line-height:1.65}
+
+  .scene{background:var(--bg)}
+  .scene .eyebrow{color:var(--kraft);text-align:center;display:block}
+  .scene h2{font-size:31px;text-align:center;color:#2F4A38;line-height:1.42;margin-top:8px}
+  .scene .lead{text-align:center;font-size:17px;color:var(--sub);margin-top:12px;line-height:1.75}
+  .sgrid{margin-top:26px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
+  .sgrid .ph{min-height:150px;font-size:13.5px}
+  .sgrid .tall{grid-column:1 / -1;min-height:210px}
+  .stamps{margin-top:22px;display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
+  .stamp{border:2.5px solid var(--kraft);color:var(--kraft);border-radius:999px;padding:9px 16px;
+    font-weight:800;font-size:13.5px;letter-spacing:1.5px;transform:rotate(-2deg);background:#fff}
+  .stamp:nth-child(2){transform:rotate(1.5deg)} .stamp:nth-child(3){transform:rotate(-1deg)}
+  .dogcut{margin:24px auto 0;max-width:330px;border-radius:20px;overflow:hidden;box-shadow:var(--sh)}
+  .dogcut .ph{min-height:190px;border-radius:20px}
 
   /* FAQ */
   .faq{background:var(--card)}
@@ -154,10 +168,10 @@
   /* 마무리 CTA */
   .cta{background:linear-gradient(160deg,var(--green) 0%,var(--green-d) 100%);color:#fff;text-align:center;padding:56px 24px}
   .cta h2{font-size:28.6px;line-height:1.4}
-  .cta p{color:#DAF7F4;font-size:18.6px;margin-top:14px;line-height:1.7}
+  .cta p{color:#E6EFE6;font-size:18.6px;margin-top:14px;line-height:1.7}
   .cta .box{margin-top:24px;background:rgba(255,255,255,.1);border-radius:16px;padding:20px;font-weight:800;font-size:19.8px}
-  .cta .box .em{color:#ffd9c9}
-  .foot{background:#04443F;color:#A9EFE9;text-align:center;padding:28px;font-size:15.6px;line-height:1.9}
+  .cta .box .em{color:#F2CFBC}
+  .foot{background:#26382B;color:#CBDCCD;text-align:center;padding:28px;font-size:15.6px;line-height:1.9}
 
   /* 고객이 먼저 물어본 것 */
   .asked{background:#fff;border-top:1px solid var(--line)}
@@ -171,7 +185,7 @@
   .askcard p{margin:9px 0 0;font-size:18.6px;color:#5f574c;line-height:1.7}
   .askcard p b{color:var(--coral-d)}
   .asked .answer{margin-top:22px;background:var(--green);color:#fff;border-radius:18px;padding:24px;font-weight:800;font-size:20.4px;line-height:1.65}
-  .asked .answer span{color:#ffd9c9}
+  .asked .answer span{color:#F2CFBC}
 
   .reviews .pf{background:#fff;color:#c0563f;padding:2px 7px;border-radius:5px;font-size:15.5px;font-weight:800}
   .rcard .meta{display:flex;align-items:center;gap:6px;font-size:15.5px;color:#5e463f;margin-top:3px}
@@ -200,11 +214,11 @@
   .pure .c.bad .h{color:#b07d6c} .pure .c.good .h{color:var(--green)}
   .pure .c p{margin:7px 0 0;font-size:18.6px;color:var(--sub);line-height:1.7}
   .pure .stmt{margin-top:24px;background:var(--green);color:#fff;border-radius:18px;padding:24px;font-weight:800;font-size:21px;line-height:1.65}
-  .pure .stmt span{color:#ffd9c9}
+  .pure .stmt span{color:#F2CFBC}
   .pure .honest{margin-top:16px;font-size:17.4px;color:var(--sub);line-height:1.75;background:#fff;border:1px dashed var(--line);border-radius:14px;padding:14px 16px;text-align:left}
 </style>
 <div class="wrap">
-  <div class="anno">🎨 <b>상세페이지 v10 · 민트 팔레트 · 큰 글씨</b> — 이 제품은 <b>쿠팡 판매 안 함</b>(자사몰 미개설). 후기는 우피껌 라인 누적 <b>356건·평균 4.77</b>(2026.07.26). 타 플랫폼명은 노출하지 않음. 규격 <b>3~6cm·200g·약 70개</b>. 점선=기존 보유 실사 자리.</div>
+  <div class="anno">🎨 <b>상세페이지 v11 · 세이지+크라프트</b> — 실제 패키지(크라프트 봉투+세이지 라벨) 색을 계승. 강아지 컷 자리 보강. — 이 제품은 <b>쿠팡 판매 안 함</b>(자사몰 미개설). 후기는 우피껌 라인 누적 <b>356건·평균 4.77</b>(2026.07.26). 타 플랫폼명은 노출하지 않음. 규격 <b>3~6cm·200g·약 70개</b>. 점선=기존 보유 실사 자리.</div>
 
   <div class="topbar"><div class="brand">🐾 PetFocus</div><div class="official">본사 공식 스토어</div></div>
 
@@ -245,7 +259,8 @@
       <div class="pain-item"><span class="q">Q</span>수입 원료·첨가물이 걱정돼요</div>
       <div class="pain-item"><span class="q">Q</span>혼자 있을 때 심심해해요</div>
     </div>
-    <div class="bridge">그래서 <span style="color:#0A8478">퓨어 베이비 츄잉</span>을 만들었어요 👇</div>
+    <div class="dogcut"><div class="ph">이앓이 하는 퍼피 컷<br>(기존 보유 / 포토후기 활용)</div></div>
+    <div class="bridge">그래서 <span style="color:#4A7458">퓨어 베이비 츄잉</span>을 만들었어요 👇</div>
   </section>
 
   <!-- 고객이 먼저 물어보셨어요 (실제 리뷰 인용) -->
@@ -280,6 +295,7 @@
       <div class="c good"><div class="h">🐶 순수부터 시작하면</div><p>아기 때부터 순수 우피껌만 먹은 아이는,<br>향 첨가 없이도 우피껌 하나를 잘 즐겨요.</p></div>
     </div>
     <div class="stmt">그래서 <span>첫 껌</span>만큼은 순수하게.<br>퓨어 베이비 츄잉엔 향미제도 부재료도 없이<br>한우 우피, 그것 하나예요.</div>
+    <div class="dogcut"><div class="ph">첫 껌 물고 있는 아기 강아지 컷<br>(신규 촬영 권장)</div></div>
     <div class="honest">🤍 솔직히 말하면,<br>저희도 닭안심·황태 츄잉을 만들어요. 기호성 때문에요.<br><br>그래도 <b>첫 껌만큼은 순수하게</b> 권해요.<br>그게 아이 평생 입맛에 더 좋다고 믿거든요.</div>
   </section>
 
@@ -294,7 +310,7 @@
   <!-- 직공장 -->
   <section class="sec factory">
     <span class="eyebrow">Our Process</span>
-    <h2>원물은 부모님 공장에서,<br>제조는 <em style="font-style:normal;color:#0A8478">펫포커스가 직접</em>.</h2>
+    <h2>원물은 부모님 공장에서,<br>제조는 <em style="font-style:normal;color:#4A7458">펫포커스가 직접</em>.</h2>
 
     <div class="stage">
       <span class="badge">1차 가공</span>
@@ -351,6 +367,26 @@
       <tr><td class="rh">스틱 개수</td><td>4~7개</td><td>7~11개</td><td>11~14개</td><td>14개~</td></tr>
     </table>
     <p class="fnote">※ 한 봉지(200g·약 70개) 평균으로 환산한 개수예요. <b>하루 총량(g)이 기준</b>이고, 개수는 참고용이에요.<br>※ 개체 특성·건강·운동량·계절에 따라 다를 수 있으니 아이에 맞게 조절해 주세요.<br>※ 처음엔 소량부터 시작하고, 모양·크기가 조금씩 달라도 중량은 같아요.<br>※ 충분한 물과 함께 급여하고, <b>보호자가 곁에서 지켜봐 주세요.</b> 마지막 작은 조각은 삼키지 않도록 치워주세요.</p>
+  </section>
+
+  <!-- 급여 장면 -->
+  <section class="sec scene">
+    <span class="eyebrow">Happy Chewing</span>
+    <h2>이렇게 즐기고 있어요</h2>
+    <p class="lead">펫포커스 우피껌을 만난<br>아이들의 실제 모습이에요.</p>
+    <div class="sgrid">
+      <div class="ph tall">대표 급여 장면 (가로 컷)<br>아이가 앞발로 잡고 씹는 모습</div>
+      <div class="ph">퍼피 급여 컷 ①</div>
+      <div class="ph">퍼피 급여 컷 ②</div>
+      <div class="ph">소형견 급여 컷</div>
+      <div class="ph">스틱 물고 있는 클로즈업</div>
+      <div class="ph tall">포토후기 모음 (고객 동의 필요)</div>
+    </div>
+    <div class="stamps">
+      <span class="stamp">PET FOCUS</span>
+      <span class="stamp">CHEWING</span>
+      <span class="stamp">ENJOY</span>
+    </div>
   </section>
 
   <!-- 후기 -->
@@ -416,6 +452,7 @@
   <section class="cta">
     <h2>우리 아이 첫 우피껌,<br>펫포커스로 시작해요 🐶</h2>
     <p>부모님 공장에서 받은 생우피로<br>저희가 직접 만들었어요</p>
+    <div class="dogcut" style="max-width:300px"><div class="ph" style="background:rgba(255,255,255,.12);border-color:rgba(255,255,255,.4);color:#D3E3D5">마무리 강아지 컷<br>(만족스럽게 씹는 모습)</div></div>
     <div class="box">단일원료 <span class="em">200g</span> · 위 <b>구매하기</b>로 담아주세요</div>
   </section>
 
