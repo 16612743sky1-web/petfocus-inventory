@@ -44,7 +44,9 @@
   .tchip{background:#fff;border:1px solid var(--green-soft);color:var(--green);font-weight:800;font-size:16.8px;padding:8px 13px;border-radius:10px;box-shadow:0 3px 8px rgba(60,111,176,.08)}
 
   /* 혜택 바 */
-  .benefit{background:var(--coral-soft);border-top:1px solid #EFDACE;border-bottom:1px solid #EFDACE;display:flex;align-items:center;justify-content:center;gap:8px;padding:16px;font-size:18.6px;font-weight:800;color:var(--coral-d)}
+  .benefit{background:var(--coral-soft);border-top:1px solid #EFDACE;border-bottom:1px solid #EFDACE;display:block;text-align:center;padding:18px 20px;font-size:18px;font-weight:800;color:var(--coral-d);line-height:1.55}
+  .benefit .bmain{display:block;font-size:20px}
+  .benefit .bsub{display:block;margin-top:5px;font-size:16.5px;font-weight:700;opacity:.9}
   .benefit .dot{width:6px;height:6px;border-radius:50%;background:var(--coral)}
 
   /* WHY 3초 차별화 */
@@ -115,11 +117,11 @@
   .size .facts .row{display:flex;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);font-size:18.6px}
   .size .facts .row:last-child{border-bottom:none}
   .size .facts .row .k{color:var(--sub)} .size .facts .row .v{font-weight:700}
-  .feedtable{width:100%;border-collapse:collapse;margin-top:18px;font-size:16.2px;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 5px 12px rgba(60,111,176,.06)}
-  .feedtable th,.feedtable td{border:1px solid var(--line);padding:10px 4px;text-align:center}
+  .feedtable{width:100%;border-collapse:collapse;margin-top:18px;font-size:15.6px;table-layout:fixed;background:#fff;border-radius:14px;overflow:hidden;box-shadow:0 5px 12px rgba(60,111,176,.06)}
+  .feedtable th,.feedtable td{border:1px solid var(--line);padding:10px 2px;text-align:center;word-break:keep-all}
   .feedtable th{background:var(--green-soft);color:var(--green);font-weight:800}
   .fnote{margin-top:14px;font-size:15.6px;color:var(--sub);line-height:1.8}
-  .feedtable .rh{background:#F7FAFD;color:var(--green);font-weight:800;font-size:15.5px;white-space:nowrap}
+  .feedtable .rh{background:#F7FAFD;color:var(--green);font-weight:800;font-size:15.5px;width:24%;line-height:1.35}
 
   /* 후기 */
   .reviews{background:var(--pink)}
@@ -266,7 +268,7 @@
     </div>
   </section>
 
-  <div class="benefit"><span class="dot"></span> 실구매 후기 <b>356건</b> · 평균 <b>4.77점</b> · 5점 <b>319건</b> <span class="dot"></span></div>
+  <div class="benefit"><span class="bmain">실구매 후기 356건</span><span class="bsub">평균 4.77점 · 5점 319건(89.6%)</span></div>
 
   <!-- WHY 차별화 -->
   <section class="sec why">
