@@ -36,17 +36,19 @@ Playwright로 파일을 직접 열어 콘솔 오류와 핵심 흐름을 점검�
 - 모바일 폭(390px)에서 레이아웃이 깨지지 않는지.
 
 ## 3. 데이터 저장 규칙을 깼는지 확인
-고친 도구의 CLAUDE.md/GUIDELINES 핵심 원칙을 위반하지 않았는지 본다.
-- **현장재고(index.html)**: 재고 증감은 batch+increment(하드룰), Firestore/로컬 두 분기 모두 구현,
-  `esc()` 없는 innerHTML 삽입 금지, `FIREBASE_CONFIG` 블록 건드리지 않기.
-- **재고/원가(stock-cost)**: 재고는 records에서 매번 재계산(`computeStock()`), 삭제는 soft delete
-  (`deleted:true`), 스키마 변경 시 `petfocus_v1` 키 버전업 + `load()` 마이그레이션.
+규칙 원문은 각 도구 문서가 기준이다(여기서 다시 정의하지 않음) — 위반 여부만 체크한다.
+- **현장재고(index.html)**: `CLAUDE.md` §2 HARD RULE(이중 스토리지·batch+increment·
+  `FIREBASE_CONFIG` 불변), §5 HARD RULE(`esc()`) 위반 여부.
+- **재고/원가(stock-cost)**: `stock-cost/GUIDELINES.md`의 records 재계산(`computeStock()`)·
+  soft delete(`deleted:true`)·스키마 버전(`petfocus_v1` + `load()` 마이그레이션) 위반 여부.
 - 공통: 고객 개인정보(주소·전화)를 데이터 모델에 추가하지 않는다 (공개 URL 동기화 전제).
 
 ## 4. 원가 검산 (stock-cost 또는 원가 계산 로직을 건드렸을 때만)
 기준값: 우피10kg·식초2L·스틱50·포장50·건조12h·인시4
 → 배치 총원가 **231,000원**, 50개 생산 시 개당 **4,620원**.
 이 값이 나오지 않으면 계산 로직이 틀린 것이다.
+이 숫자는 `CLAUDE.md` §0 "기준 단가"에서 산출한 값이다 — **이 숫자를 다른 문서/커맨드에
+복사하지 말 것**. 기준 단가가 바뀌면 이 검산값도 함께 갱신한다(단일 출처는 여기).
 
 ## 5. 커밋 & 배포
 위가 모두 통과하면:
