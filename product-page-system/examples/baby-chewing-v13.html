@@ -131,6 +131,9 @@
   .reviews .cnt{font-size:16.2px;color:#5e463f;margin-top:4px}
   .rcards{margin-top:24px;display:flex;flex-direction:column;gap:12px}
   .rcard{background:#fff;border-radius:16px;padding:16px 18px;box-shadow:0 5px 12px rgba(192,86,63,.07)}
+  /* 실제 후기 캡쳐 첨부 슬롯 (2026-08-04 대표 피드백: 타이핑 인용만 말고 실물 캡쳐 첨부) */
+  .rcard .rshot{margin-top:10px;min-height:88px;font-size:13px;border-radius:10px}
+  .rcard .rshot img{width:100%;display:block;border-radius:10px;border:1px solid var(--line)}
   .rcard .top{display:flex;justify-content:space-between;align-items:center}
   .rcard .who{font-weight:800;font-size:17.4px}
   .rcard .s{color:var(--gold);font-size:15.5px}
@@ -167,10 +170,11 @@
   .spec .sv em{font-style:normal;font-size:14.5px;color:var(--sub);font-weight:600;margin-left:3px}
   .spec .hi .sv{color:#A8462F}
   .specnote{margin-top:12px;font-size:14.5px;color:var(--sub);line-height:1.7}
-  .docgrid{margin-top:24px;display:grid;grid-template-columns:1fr 1fr;gap:12px}
-  .doc{margin:0;background:#fff;border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  /* 서류는 증빙용 — 크게 보일 필요 없음 (2026-08-04 대표 피드백: 작게) */
+  .docgrid{margin-top:20px;display:grid;grid-template-columns:1fr 1fr;gap:8px;max-width:330px;margin-left:auto;margin-right:auto}
+  .doc{margin:0;background:#fff;border:1px solid var(--line);border-radius:10px;overflow:hidden}
   .doc img{width:100%;display:block}
-  .doc figcaption{padding:11px 8px;font-size:14.5px;font-weight:800;color:#4a3f7a;text-align:center}
+  .doc figcaption{padding:7px 6px;font-size:12.5px;font-weight:800;color:#4a3f7a;text-align:center}
   .certlist{margin-top:22px;display:grid;grid-template-columns:1fr 1fr;gap:10px}
   .citem{background:#fff;border:1.5px solid #D3CAE8;border-radius:14px;padding:15px 10px;text-align:center;
     font-weight:800;font-size:15.8px;color:#4a3f7a}
@@ -402,7 +406,7 @@
       <div class="row"><span class="k">대상</span><span class="v">4개월 이상 퍼피</span></div>
       <div class="row"><span class="k">크기</span><span class="v">미니 3~6cm</span></div>
       <div class="row"><span class="k">1개 중량</span><span class="v">약 2~3g</span></div>
-      <div class="row"><span class="k">구성</span><span class="v">200g · <b style="color:var(--green)">약 70개</b></span></div>
+      <div class="row"><span class="k">구성</span><span class="v">200g · <b style="color:var(--green)">약 72개</b></span></div>
       <div class="row"><span class="k">원료</span><span class="v">국내산 한우 우피 (단일원료)</span></div>
     </div>
     <table class="feedtable">
@@ -410,7 +414,7 @@
       <tr><td class="rh">하루 권장량</td><td>10~20g</td><td>20~30g</td><td>30~40g</td><td>40g~</td></tr>
       <tr><td class="rh">스틱 개수</td><td>4~7개</td><td>7~11개</td><td>11~14개</td><td>14개~</td></tr>
     </table>
-    <p class="fnote">※ 한 봉지(200g·약 70개) 평균으로 환산한 개수예요. <b>하루 총량(g)이 기준</b>이고, 개수는 참고용이에요.<br>※ 개체 특성·건강·운동량·계절에 따라 다를 수 있으니 아이에 맞게 조절해 주세요.<br>※ 처음엔 소량부터 시작하고, 모양·크기가 조금씩 달라도 중량은 같아요.<br>※ 충분한 물과 함께 급여하고, <b>보호자가 곁에서 지켜봐 주세요.</b> 마지막 작은 조각은 삼키지 않도록 치워주세요.</p>
+    <p class="fnote">※ 한 봉지(200g·약 72개) 평균으로 환산한 개수예요. <b>하루 총량(g)이 기준</b>이고, 개수는 참고용이에요.<br>※ 개체 특성·건강·운동량·계절에 따라 다를 수 있으니 아이에 맞게 조절해 주세요.<br>※ 처음엔 소량부터 시작하고, 모양·크기가 조금씩 달라도 중량은 같아요.<br>※ 충분한 물과 함께 급여하고, <b>보호자가 곁에서 지켜봐 주세요.</b> 마지막 작은 조각은 삼키지 않도록 치워주세요.</p>
   </section>
 
   <!-- 급여 장면 (퍼피 실사) -->
@@ -443,17 +447,25 @@
     <div class="rcards">
       <div class="rcard"><div class="top"><span class="who">milk******</span><span class="s">★★★★★</span></div>
         <div class="meta">2026.07.26</div>
-        <p>“이갈이 시기라 줘봤는데 생각보다 잘먹어요!”</p></div>
+        <p>“이갈이 시기라 줘봤는데 생각보다 잘먹어요!”</p>
+        <div class="ph rshot">실제 후기 캡쳐 삽입 — 리뷰캡쳐사진_260804.zip에서 milk****** 후기 (닉네임·프로필 마스킹 확인)</div></div>
       <div class="rcard"><div class="top"><span class="who">yunj*******</span><span class="s">★★★★★</span></div>
         <div class="meta">2026.07.15</div>
-        <p>“국내산 한우 우피 사용, 첨가물 없이 깔끔한 원물 간식으로 오래 씹을 수 있어 만족도가 높았습니다. 이중 포장에 개별 유통기한 표시까지 세심한 구성으로 <b>소형견도 잡고 먹기 좋은 크기</b>였습니다.”</p></div>
+        <p>“국내산 한우 우피 사용, 첨가물 없이 깔끔한 원물 간식으로 오래 씹을 수 있어 만족도가 높았습니다. 이중 포장에 개별 유통기한 표시까지 세심한 구성으로 <b>소형견도 잡고 먹기 좋은 크기</b>였습니다.”</p>
+        <div class="ph rshot">실제 후기 캡쳐 삽입 — yunj******* 후기 (마스킹 확인)</div></div>
       <div class="rcard"><div class="top"><span class="who">jhj1****</span><span class="s">★★★★★</span></div>
         <div class="meta">2026.07.22</div>
-        <p>“저희 강아지는 평소에 강아지껌 자체를 별로 즐기지 않는데 이 제품은 성분이 좋아서 구매했는데 다행히 너무 잘 먹어요. 간식 봉지 뜯었을때 <b>인위적인 냄새도 안나구요.</b>”</p></div>
+        <p>“저희 강아지는 평소에 강아지껌 자체를 별로 즐기지 않는데 이 제품은 성분이 좋아서 구매했는데 다행히 너무 잘 먹어요. 간식 봉지 뜯었을때 <b>인위적인 냄새도 안나구요.</b>”</p>
+        <div class="ph rshot">실제 후기 캡쳐 삽입 — jhj1**** 후기 (마스킹 확인)</div></div>
       <div class="rcard"><div class="top"><span class="who">ivy1***</span><span class="s">★★★★★</span></div>
         <div class="meta">2026.07.16</div>
-        <p>“원래 급하게 간식을 먹어서 속도가 걱정이었는데요 오랜시간을 들여서 천천히 잘 씹어먹더라구요 … 국내산 한우 우피로 만든거라 성분도 믿고 먹일 수 있었어요!”</p></div>
+        <p>“원래 급하게 간식을 먹어서 속도가 걱정이었는데요 오랜시간을 들여서 천천히 잘 씹어먹더라구요 … 국내산 한우 우피로 만든거라 성분도 믿고 먹일 수 있었어요!”</p>
+        <div class="ph rshot">실제 후기 캡쳐 삽입 — ivy1*** 후기 (마스킹 확인)</div></div>
     </div>
+    <!-- 실사 첨부 규칙(2026-08-04): 타이핑 인용은 가독용, 실제 캡쳐 이미지가 증빙.
+         캡쳐는 닉네임 뒷자리·프로필 사진 마스킹 후 삽입. 인용 원문과 캡쳐 내용이 반드시 일치해야 한다.
+         사은품 섹션(gcards)의 후기 3건도 같은 방식으로 캡쳐를 첨부한다. -->
+    <div class="ph" style="min-height:70px;font-size:13px;margin-top:12px">사은품 섹션 후기 3건(seul****·dmsl***·79****)도 캡쳐 첨부 — 같은 zip에서</div>
     <p class="rsrc">※ 위 후기는 <b>펫포커스 한우 우피껌 라인(성견용 퓨어플레인 등)</b>의 실제 구매 후기예요.<br>퓨어 베이비 츄잉은 새로 나온 제품이라 아직 자체 후기가 쌓이는 중입니다.<br>평점·건수는 <b>평점 필터 없이 전수 집계</b>한 값이에요 · 집계일 2026.07.26</p>
   </section>
 
