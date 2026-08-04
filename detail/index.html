@@ -286,10 +286,15 @@ input.f:focus,select.f:focus,textarea.f:focus{outline:2px solid var(--brown);bor
       한글은 6단계에서 따로 얹습니다.</div>
       <label class="f">색감 콘셉트 <span class="hint">상품별 저장 — 바꾸면 아래 프롬프트가 다시 생성돼요</span></label>
       <select class="f" id="pr_palette" onchange="onPalette()">
-        <option value="mint">크림·베이지 + 연한 민트 (추천 — 퍼피 라인·크라프트 패키지)</option>
-        <option value="sky">기존 톤 그대로 — 하늘색 커버 + 옐로우·크림</option>
+        <option value="sage">세이지 + 크라프트 · 오트밀 크림 (현재 브랜드 확정 팔레트)</option>
+        <option value="mint">크림·베이지 + 연한 민트</option>
+        <option value="sky">기존 톤 — 하늘색 커버 + 옐로우·크림</option>
+        <option value="custom">✏️ 직접 입력 — 원하는 색을 자유롭게 쓰기</option>
       </select>
-      <p class="mininote">최종 결정자 비교용: 한 가지로 확정하지 말고 두 색감으로 각각 프롬프트를 복사해 결과물을 나란히 보여주세요.</p>
+      <textarea class="f" id="pr_palette_custom" style="min-height:80px;display:none"
+        placeholder="예: 배경은 따뜻한 오트밀 크림, 강조는 세이지그린(#4A7458), 원물 느낌 살리는 크라프트 브라운. 섹션마다 배경색이 바뀌는 리듬 유지, 금지 아이콘은 빨강."
+        oninput="onPaletteCustom()"></textarea>
+      <p class="mininote">마음에 안 들면 <b>직접 입력</b>을 고르세요. 프리셋에 갇히지 말고 원하는 색·분위기를 문장으로 쓰면 그대로 프롬프트에 들어갑니다.</p>
     </div>
     <div class="card">
       <div class="card-title">📷 이미지 삽입 <span class="sub" id="imgProdName"></span></div>
@@ -376,13 +381,54 @@ input.f:focus,select.f:focus,textarea.f:focus{outline:2px solid var(--brown);bor
 <script>
 'use strict';
 const KEY='petfocus_detail_v1';
+const DATA_VER=2;   // 올릴 때마다 migrate()가 저장된 데이터를 정정한다
+
+/* 저장된(로컬) 데이터에 남은 낡은 값을 자동 정정.
+   소스만 고치면 이미 저장된 localStorage는 안 바뀌므로 여기서 처리한다. */
+let MIGRATED=[];
+function migrate(s){
+  if(!s || s.dataVer>=DATA_VER) return s;
+  MIGRATED=[];
+  const fixText=(t)=>{
+    if(typeof t!=='string'||!t) return t;
+    let o=t;
+    o=o.replace(/5\s*~\s*6\s*cm/g,'3~6cm');
+    o=o.replace(/35\s*g\s*[·\/]\s*200\s*g/g,'200g');
+    o=o.replace(/35\s*g\s*맛보기\s*\/\s*200\s*g\s*넉넉히/g,'200g 한 봉지에 약 70개');
+    o=o.replace(/처음이라면\s*35g으로\s*가볍게\s*시작해\s*보세요[.,]?\s*아이가\s*좋아하면\s*200g이\s*준비되어\s*있어요[.]?/g,
+                '첫 껌은 순수하게 시작해 보세요. 한 봉지 200g, 약 70개가 들어 있어요.');
+    o=o.replace(/\(35g부터 시작 안내\)/g,'');
+    return o;
+  };
+  // 톤앤매너의 "여백 많고"
+  if(s.guidelines && /여백\s*많/.test(s.guidelines.tonemanner||'')){
+    s.guidelines.tonemanner=s.guidelines.tonemanner
+      .replace(/분위기:\s*여백\s*많고\s*/,'분위기: ')
+      .replace(/(과한 아이콘·장식 금지\.)/,'$1 여백을 과하게 비우지 말고 정보 밀도를 유지.');
+    MIGRATED.push('톤앤매너에서 "여백 많고" 제거');
+  }
+  // 상품 텍스트 필드
+  let hit=0;
+  (s.products||[]).forEach(p=>{
+    ['name','ingredients','spec','price','feeding','caution','photo','sections','paletteCustom'].forEach(k=>{
+      const b=p[k]; const a=fixText(b); if(a!==b){ p[k]=a; hit++; }
+    });
+    if(Array.isArray(p.features)) p.features=p.features.map(f=>{
+      const a=fixText(f); if(a!==f) hit++; return a;
+    });
+  });
+  if(hit) MIGRATED.push('상품 정보의 구 규격(5~6cm · 35g/200g) '+hit+'곳 정정');
+  s.dataVer=DATA_VER;
+  return s;
+}
 const DEF_SECTIONS='1. 후킹(첫 문장으로 시선 잡기)\n2. 문제제기(보호자의 고민)\n3. 해결(우리 제품이 왜 답인지)\n4. 성분 근거/출처\n5. 신뢰요소(수제·소량생산·원산지·무첨가)\n6. 급여 방법\n7. 주의사항\n8. 브랜드 스토리(왜 만들었나)\n9. FAQ / 배송·교환';
 const DEF_FORBIDDEN='혁신적인, 완벽한, 최고의, 특별한, 놀라운, 지금 바로, 경험해보세요, 후회하지 않습니다, 국내 유일, No.1';
 const DEF_TONEMANNER='- 말투: 과장 없이 다정한 존댓말 ("~해 주세요", "~있어요"). 효능 단정 금지.\n'+
   '- 구성 패턴: 메인 커버(큰 타이틀 + 실제 사진 + 뱃지 4개) → "Check Point" 라벨 + ✔ 체크리스트 → 차별점/무첨가 → 보호자 공감 인용구 → 실제 제품 사진(원물→손질→건조) → 크기·중량 안내 → 일일 권장 급여량 표 → ※ 유의사항 각주\n'+
-  '- 분위기: 여백 많고 실제 제품 사진 중심. 과한 아이콘·장식 금지.\n'+
+  '- 분위기: 실제 제품 사진 중심. 과한 아이콘·장식 금지. 여백을 과하게 비우지 말고 정보 밀도를 유지.\n'+
   '- 판매: 모든 제품 단품 판매(세트 없음). 용량은 추가될 수 있으니 특정 용량을 단정하지 않기.';
 const PALETTES={
+  sage:'오트밀 크림 배경 + 세이지그린 강조 + 크라프트 브라운 서브 (실제 크라프트 봉투·세이지 라벨 패키지와 같은 톤). 섹션마다 배경색이 바뀌는 리듬 유지, 경고·금지 표시는 붉은 계열 유지.',
   mint:'크림·아이보리·베이지·브라운 배경 + 연한 민트 포인트 (크라프트 종이 패키지와 어울리는 따뜻한 톤)',
   sky:'하늘색 메인 커버 + 옐로우·크림 섹션 배경 (기존 상세페이지와 동일한 톤)'
 };
@@ -404,11 +450,23 @@ function load(){
     if(!s.guidelines) s.guidelines=blankState().guidelines;
     if(!s.guidelines.tonemanner) s.guidelines.tonemanner=DEF_TONEMANNER;
     if(!Array.isArray(s.products)) s.products=[];
-    return s;
+    return migrate(s);
   }catch(e){ return blankState(); }
 }
 function save(){ localStorage.setItem(KEY, JSON.stringify(state)); }
 let state=load();
+if(MIGRATED.length){ save(); }
+function showMigrateBanner(){
+  if(!MIGRATED.length) return;
+  const d=document.createElement('div');
+  d.style.cssText='position:sticky;top:0;z-index:99;background:#FFF4D6;border-bottom:2px solid #E0C46A;'+
+    'padding:12px 16px;font-size:13.5px;line-height:1.6;color:#6b5011';
+  d.innerHTML='🔄 <b>저장된 데이터를 최신 기준으로 정정했어요</b><br>'+
+    MIGRATED.map(m=>'· '+m).join('<br>')+
+    '<br><button onclick="this.parentNode.remove()" style="margin-top:8px;padding:6px 12px;border:1px solid #E0C46A;'+
+    'background:#fff;border-radius:8px;font-size:13px;cursor:pointer">확인</button>';
+  document.body.insertBefore(d, document.body.firstChild);
+}
 
 function curProd(){ return state.products.find(p=>p.id===state.currentId && !p.deleted)||null; }
 function uid(){ return 'p'+Date.now().toString(36)+Math.random().toString(36).slice(2,6); }
@@ -444,7 +502,7 @@ function renderProdSel(){
 }
 function selectProduct(id){ state.currentId=id||null; save(); fillProdForm(); renderAll(); }
 function newProduct(){
-  const p={id:uid(),name:'',ingredients:'',spec:'',price:'',features:[''],feeding:'',caution:'',photo:'',sections:'',palette:'mint',images:[],updatedAt:Date.now(),deleted:false};
+  const p={id:uid(),name:'',ingredients:'',spec:'',price:'',features:[''],feeding:'',caution:'',photo:'',sections:'',palette:'sage',paletteCustom:'',images:[],updatedAt:Date.now(),deleted:false};
   state.products.push(p); state.currentId=p.id; save();
   renderProdSel(); fillProdForm(); go(2); toast('새 상품을 만들었어요');
 }
@@ -497,7 +555,9 @@ function fillProdForm(){
   v('pr_name',p.name);v('pr_ingredients',p.ingredients);v('pr_spec',p.spec);
   v('pr_price',p.price);v('pr_feeding',p.feeding);v('pr_caution',p.caution);v('pr_photo',p.photo);
   v('pr_sections',p.sections||'');
-  const pal=document.getElementById('pr_palette'); if(pal) pal.value=p.palette||'mint';
+  const pal=document.getElementById('pr_palette'); if(pal) pal.value=p.palette||'sage';
+  const pc=document.getElementById('pr_palette_custom'); if(pc) pc.value=p.paletteCustom||'';
+  togglePaletteCustom();
   renderFeat();
 }
 function onProd(){
@@ -528,9 +588,20 @@ function addFeat(){ const p=curProd(); if(!p)return; p.features.push(''); save()
 function onPalette(){
   const p=curProd();
   const sel=document.getElementById('pr_palette');
-  if(!p){ toast('먼저 상품을 만들어주세요'); sel.value='mint'; return; }
+  if(!p){ toast('먼저 상품을 만들어주세요'); sel.value='sage'; return; }
   p.palette=sel.value; p.updatedAt=Date.now(); save(); renderAll();
+  togglePaletteCustom();
   toast('색감을 바꿨어요 — 프롬프트 다시 복사하세요');
+}
+function togglePaletteCustom(){
+  const sel=document.getElementById('pr_palette'), ta=document.getElementById('pr_palette_custom');
+  if(!sel||!ta) return;
+  ta.style.display = sel.value==='custom' ? 'block' : 'none';
+}
+function onPaletteCustom(){
+  const p=curProd(); if(!p) return;
+  p.paletteCustom=document.getElementById('pr_palette_custom').value;
+  p.updatedAt=Date.now(); save(); renderAll();
 }
 
 /* ---- 예시 상품 불러오기 (퓨어 베이비 츄잉) ---- */
@@ -552,7 +623,7 @@ function seedBaby(){
   }
   const p={id:uid(),name:'퓨어 베이비 츄잉',
     ingredients:'100% 국내산 한우 우피 (무첨가·무방부제·색소/향미제 무첨가)',
-    spec:'5~6cm 미니 사이즈 / 35g·200g 단품 판매 (용량은 추가될 수 있음)',
+    spec:'미니 3~6cm / 200g 단품 (한 봉지 약 70개, 1개 약 2~3g)',
     price:'',
     features:[
       '4개월 이상 퍼피 전용 — 우리 아이가 처음 만나는 한우 우피껌',
@@ -563,9 +634,9 @@ function seedBaby(){
     ],
     feeding:'하루 1~2개. 충분한 물과 함께, 보호자가 지켜보며 급여. 남은 제품은 밀봉 보관.',
     caution:'오래 씹는 제품이라 항상 보호자의 관찰 아래 급여. 삼킬 만큼 작아진 조각은 회수. 씹는 시간은 개체별로 차이가 있음.',
-    photo:'크림톤 배경, 아기 강아지가 앞발로 잡고 씹는 컷, 한우 원물과 우피껌, 손바닥 위 5~6cm 크기 비교컷, 35g·200g 두 용량 나란히',
-    sections:'1. 첫 화면 — 우리 아이가 처음 만나는 한우 우피껌\n2. 문제 공감 — 이런 고민 있으셨나요?\n3. 왜 베이비 전용인가 — 5~6cm 미니 (안전 급여 안내 포함)\n4. 차별점 — 원재료 단 하나, 무첨가\n5. 믿고 먹일 수 있는 이유 — 표백·발색제 없이 원물 그대로\n6. 얼마나 들어있나요 — 35g 맛보기 / 200g 넉넉히\n7. 이런 아이에게 추천합니다\n8. 급여방법 (표)\n9. 자주 묻는 질문 — 안전 불안 해소\n10. 마지막 — 처음이라, 더 좋은 것을 선택하세요 (35g부터 시작 안내)',
-    palette:'mint',
+    photo:'오트밀 크림톤 배경, 아기 강아지가 앞발로 잡고 씹는 컷, 한우 원물과 우피껌, 손바닥 위 3~6cm 미니 스틱 크기 비교컷, 200g 봉지와 스틱 여러 개',
+    sections:'1. 첫 화면 — 우리 아이가 처음 만나는 한우 우피껌\n2. 문제 공감 — 이런 고민 있으셨나요?\n3. 왜 베이비 전용인가 — 3~6cm 미니 (안전 급여 안내 포함)\n4. 차별점 — 원재료 단 하나, 무첨가\n5. 믿고 먹일 수 있는 이유 — 표백·발색제 없이 원물 그대로\n6. 얼마나 들어있나요 — 200g 한 봉지에 약 70개\n7. 이런 아이에게 추천합니다\n8. 급여방법 (표)\n9. 자주 묻는 질문 — 안전 불안 해소\n10. 마지막 — 처음이라, 더 좋은 것을 선택하세요',
+    palette:'sage',
     images:[],updatedAt:Date.now(),deleted:false};
   state.products.push(p); state.currentId=p.id; save();
   renderProdSel(); fillBrandForm(); fillGuideForm(); fillProdForm(); go(2);
@@ -732,7 +803,11 @@ function toneBlock(){
 }
 function paletteDesc(){
   const p=curProd();
-  return PALETTES[(p&&p.palette)||'mint']||PALETTES.mint;
+  if(p && p.palette==='custom'){
+    const t=(p.paletteCustom||'').trim();
+    return t || '(직접 입력한 색감이 비어 있어요 — 5단계에서 채워주세요)';
+  }
+  return PALETTES[(p&&p.palette)||'sage']||PALETTES.sage;
 }
 
 function build1(){
@@ -785,7 +860,7 @@ function build5c(){
   return '[상세페이지 이미지 조합]\n앞서 만든 사진들로 세로로 긴 상세페이지 이미지를 만들어줘.\n'+
     '- 섹션 순서:\n'+curSections()+'\n'+
     '- 색감: '+paletteDesc()+'\n'+
-    '- 기존 상세페이지 톤앤매너 유지 (여백 많게, 실제 제품 사진 중심):\n'+ph(state.guidelines.tonemanner,DEF_TONEMANNER)+'\n'+
+    '- 기존 상세페이지 톤앤매너 유지 (실제 제품 사진 중심):\n'+ph(state.guidelines.tonemanner,DEF_TONEMANNER)+'\n'+
     '- ★ 이미지에는 글자를 절대 넣지 마. 한글은 내가 따로 얹을 거야. 글자가 들어갈 자리는 여백으로 비워둬.';
 }
 
@@ -824,6 +899,7 @@ renderProdSel();
 if(!state.currentId){ const f=state.products.find(p=>!p.deleted); if(f)state.currentId=f.id; }
 fillBrandForm(); fillGuideForm(); fillProdForm();
 renderAll();
+showMigrateBanner();
 go(0);
 </script>
 </body>
