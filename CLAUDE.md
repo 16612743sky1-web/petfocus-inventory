@@ -17,6 +17,7 @@
 | `detail/index.html` | **상세페이지 프롬프트 생성기** — 상세페이지용 AI 프롬프트 6단계 생성 | `detail/GUIDELINES.md` |
 | `docs/` | 펫포커스 마케팅 카피·기획 문서, 작업 계획서(`plans/`) | — |
 | `.claude/skills/marketing` | 마케팅 톤앤매너 규칙 | — |
+| `.claude/skills/ads` | 네이버 쇼핑검색광고 운영 규칙 (설정·ROAS·입찰·소재 반복) | — |
 
 > ⚠️ **펫포커스 재고앱이 두 개**다. `index.html`(현장재고, 클라우드 실제 연결됨)와
 > `stock-cost/`(재고/원가, 클라우드 미설정·기능 더 많음)는 서로 다른 앱이다.
