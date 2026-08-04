@@ -218,3 +218,10 @@ KEZ의 `brands/_template.md`는 **브랜드층 = "제품 불문 고정"**이 원
 - **주의**: Drive `PETFOCUS_HQ/final-smartstore/`(오늘 08:17 생성, 슬라이스 11장)가 이 저장소 밖의
   최신 산출물이다. 이 저장소 v13 수정분(72개·서류 축소·리뷰 슬롯)을 그쪽에도 반영해야 한다.
   Drive 파일 읽기가 세션 승인 문제로 막혀 대조 검증은 미완 — 다음 세션 최우선.
+
+### 2026-08-04 (2차) — Drive 최종본 대조 완료
+- 사용자 업로드로 `final-smartstore/index.html`·`FINAL_COMPARISON.md` 확보, 대조 완료.
+- 최종 빌드에 ①개수(72개) ②실후기 캡처 ③자체테스트 서사 ④FAQ가 빠져 있어 전부 추가
+  → `product-page-system/final-smartstore/`에 소스 기록. **이 저장소 파일이 최신 기준.**
+- ⚠️ 미결 2건: FINAL_COMPARISON은 B 추천인데 빌드는 A 계열(의도 확인 필요) /
+  "부모님 공장" 문구 공개 여부(대표 결정). 상세는 final-smartstore/README.md.
