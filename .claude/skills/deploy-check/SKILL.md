@@ -1,6 +1,6 @@
 ---
 name: deploy-check
-description: petfocus-inventory의 정적 HTML 도구(현장재고 index.html, stock-cost, detail)를 수정한 뒤 GitHub Pages에 올리기 전 점검하는 체크리스트. "배포", "올려줘", "커밋", "확인해줘", HTML 수정 마무리 시점에 사용.
+description: petfocus-inventory의 정적 HTML 도구(현장재고 index.html, detail)를 수정한 뒤 GitHub Pages에 올리기 전 점검하는 체크리스트. "배포", "올려줘", "커밋", "확인해줘", HTML 수정 마무리 시점에 사용.
 ---
 
 # 배포 전 점검 (deploy-check)
@@ -13,8 +13,7 @@ petfocus-inventory는 서버 없이 정적 HTML만으로 GitHub Pages에 배포�
 
 | 파일 | 도구 | 라이브 주소 |
 |---|---|---|
-| `index.html` | 펫포커스 현장재고 (Firestore, 입출고/이력) | `.../petfocus-inventory/` |
-| `stock-cost/index.html` | 재고/원가 관리 (RTDB, 생산배치 원가·수율) | `.../petfocus-inventory/stock-cost/` |
+| `index.html` | 펫포커스 현장재고 (Firestore, 재고/입출고/이력/원가) | `.../petfocus-inventory/` |
 | `detail/index.html` | 상세페이지 프롬프트 생성기 | `.../petfocus-inventory/detail/` |
 
 ## 1. 무엇을 고쳤는지 먼저 확인
@@ -31,7 +30,7 @@ Playwright로 파일을 직접 열어 콘솔 오류와 핵심 흐름을 점검�
 - **콘솔에 빨간 오류(Error)가 없는지** — 있으면 배포 금지. (익명 인증 미설정 `console.warn`은 허용)
 - 수정한 도구의 **핵심 흐름이 실제로 동작하는지**:
   - `index.html` (현장재고): 입고 1건 저장 → 재고 탭 증가 → 이력에서 삭제 → 재고 원복
-  - `stock-cost/index.html` (재고/원가): 매입 → 생산 → 판매 → 재고 반영 → 새로고침 후 값 유지
+  - `index.html` (원가 탭): 원재료 매입 → 생산 배치 저장 → 재고 반영 → 이력에서 삭제 → 재고 원복
   - `detail/index.html` (상세페이지 생성기): 상품 입력 → 6단계 프롬프트 생성 → 새로고침 유지
 - 모바일 폭(390px)에서 레이아웃이 깨지지 않는지.
 
@@ -39,11 +38,9 @@ Playwright로 파일을 직접 열어 콘솔 오류와 핵심 흐름을 점검�
 규칙 원문은 각 도구 문서가 기준이다(여기서 다시 정의하지 않음) — 위반 여부만 체크한다.
 - **현장재고(index.html)**: `CLAUDE.md` §2 HARD RULE(이중 스토리지·batch+increment·
   `FIREBASE_CONFIG` 불변), §5 HARD RULE(`esc()`) 위반 여부.
-- **재고/원가(stock-cost)**: `stock-cost/GUIDELINES.md`의 records 재계산(`computeStock()`)·
-  soft delete(`deleted:true`)·스키마 버전(`petfocus_v1` + `load()` 마이그레이션) 위반 여부.
 - 공통: 고객 개인정보(주소·전화)를 데이터 모델에 추가하지 않는다 (공개 URL 동기화 전제).
 
-## 4. 원가 검산 (stock-cost 또는 원가 계산 로직을 건드렸을 때만)
+## 4. 원가 검산 (원가 계산 로직을 건드렸을 때만)
 기준값: 우피10kg·스틱50·포장50·건조12h·인시4
 → 배치 총원가 **226,000원**, 50개 생산 시 개당 **4,520원**.
 이 값이 나오지 않으면 계산 로직이 틀린 것이다.

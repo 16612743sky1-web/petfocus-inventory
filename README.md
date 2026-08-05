@@ -7,13 +7,11 @@
 
 | 도구 | 주소 | 설명 |
 |---|---|---|
-| 펫포커스 현장재고 | https://16612743sky1-web.github.io/petfocus-inventory/ | Firestore 기반. 재고·입출고·이력·원가 (2인 현장용) |
-| 재고/원가 관리 | https://16612743sky1-web.github.io/petfocus-inventory/stock-cost/ | RTDB 기반. 생산배치 원가·수율·판매 마진 |
+| 펫포커스 현장재고 | https://16612743sky1-web.github.io/petfocus-inventory/ | Firestore 기반. 재고·입출고·이력·원가 + 원재료 재고·생산배치 원가/수율 (2인 현장용) |
 | 상세페이지 생성기 | https://16612743sky1-web.github.io/petfocus-inventory/detail/ | 상세페이지용 AI 프롬프트 6단계 자동 생성 |
 
-> ⚠️ **재고앱이 두 개**입니다. `현장재고`(루트)는 클라우드가 실제로 연결돼 지금 쓰는 앱이고,
-> `재고/원가`(stock-cost)는 기능이 더 많지만 클라우드 미설정 버전입니다.
-> 지금은 **둘 다 보관** 중이며, 하나로 합치거나 정리하는 건 천천히 결정합니다.
+> ✅ 원래 있던 두 번째 재고앱(`stock-cost/`, 클라우드 미설정)은 2026-08-05에 위 현장재고
+> 앱으로 통합하고 삭제했습니다. 이제 재고앱은 하나입니다.
 
 ---
 
@@ -37,7 +35,7 @@
 ## 개발 메모
 
 - **도구 1개 = 폴더(또는 루트) 1개 = HTML 파일 1개.** 빌드 도구·프레임워크·npm 없음.
-- 데이터는 브라우저 `localStorage` + Firebase(현장재고 Firestore / 재고원가 RTDB)에 저장.
+- 데이터는 브라우저 `localStorage` + Firebase Firestore(현장재고)에 저장.
 - 현장재고 `index.html`은 Firebase dynamic import 때문에 `file://`로 열지 말고
   `python3 -m http.server`로 확인한다.
 - 각 도구 사용법은 폴더의 `GUIDELINES.md`, 개발 원칙은 [`CLAUDE.md`](./CLAUDE.md) 참고.
