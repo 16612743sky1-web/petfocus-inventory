@@ -292,7 +292,6 @@ nav button.sel{color:var(--brand)}
   <div class="card" style="padding:6px 14px">
     <table class="tbl">
       <tr><td>우피(원물) /kg</td><td><input type="number" id="p_woopi" value="15000"></td></tr>
-      <tr><td>식초(세척) /L</td><td><input type="number" id="p_vin" value="2500"></td></tr>
       <tr><td>스틱(심재) /개</td><td><input type="number" id="p_stick" value="150"></td></tr>
       <tr><td>포장·라벨 /세트</td><td><input type="number" id="p_pack" value="450"></td></tr>
       <tr><td>인건비 시급 /h</td><td><input type="number" id="p_wage" value="10000"></td></tr>
@@ -306,7 +305,6 @@ nav button.sel{color:var(--brand)}
     <select id="b_prod"></select>
     <table class="tbl">
       <tr><td>우피 투입 (kg)</td><td><input type="number" id="b_woopi" value="1" step="0.1"></td></tr>
-      <tr><td>식초 사용 (L)</td><td><input type="number" id="b_vin" value="1" step="0.1"></td></tr>
       <tr><td>스틱 (개)</td><td><input type="number" id="b_stick" value="30"></td></tr>
       <tr><td>포장 (세트)</td><td><input type="number" id="b_pack" value="30"></td></tr>
       <tr><td>작업 시간 (h)</td><td><input type="number" id="b_work" value="2" step="0.5"></td></tr>
@@ -418,11 +416,10 @@ function categoryOf(name){ return name.startsWith('맘엔펫') ? 'buy' : 'made';
 /* 원재료: 고정 4종. 재고 수치만 DB에 저장하고, 이름·단위·기준치는 코드 상수로 관리(SEED/LOW와 같은 방식) */
 const MAT_META = {
   woopi:   { name:'우피 (원물)',   unit:'kg',  min:5 },
-  vinegar: { name:'식초 (세척용)', unit:'L',   min:2 },
   stick:   { name:'스틱 (심재)',   unit:'개',  min:50 },
   pack:    { name:'포장지/라벨',   unit:'세트', min:50 },
 };
-const MAT_ORDER = ['woopi','vinegar','stick','pack'];
+const MAT_ORDER = ['woopi','stick','pack'];
 
 let state = { products:[], logs:[], materials:[], user:'형' };
 let type='out', chan='네이버스토어';
@@ -677,7 +674,7 @@ async function commitBatch(prodId, outQty, used, entry){
 async function saveBatch(){
   const prodId=document.getElementById('b_prod').value;
   const p=state.products.find(x=>x.id===prodId);
-  const w=num('b_woopi'), v=num('b_vin'), s=num('b_stick'), pk=num('b_pack'),
+  const w=num('b_woopi'), s=num('b_stick'), pk=num('b_pack'),
         work=num('b_work'), dry=num('b_dry'), out=parseInt(document.getElementById('b_out').value)||0,
         outkg=num('b_outkg');
   if(!p){ alert('생산 제품을 선택하세요'); return; }
@@ -685,7 +682,7 @@ async function saveBatch(){
   const curWoopi=matStock('woopi');
   if(w>curWoopi && !confirm(`우피 재고(${curWoopi}kg)보다 많이 투입합니다. 매입 입력을 놓치진 않았나요? 계속할까요?`)) return;
 
-  const mat = w*num('p_woopi') + v*num('p_vin') + s*num('p_stick') + pk*num('p_pack');
+  const mat = w*num('p_woopi') + s*num('p_stick') + pk*num('p_pack');
   const lab = work*num('p_wage');
   const ele = dry*num('p_dry');
   const tot = mat+lab+ele;
@@ -697,10 +694,10 @@ async function saveBatch(){
   const memo=document.getElementById('b_memo').value.trim();
   const entry={ pid:prodId, pname:p.name, type:'in', qty:out, chan:'생산입고', user:state.user,
     memo, ts:Date.now(), date:dLabel,
-    matUsed:{woopi:w,vinegar:v,stick:s,pack:pk},
+    matUsed:{woopi:w,stick:s,pack:pk},
     unitCost:Math.round(unitCost), yieldPct };
   try{
-    await commitBatch(prodId, out, {woopi:w,vinegar:v,stick:s,pack:pk}, entry);
+    await commitBatch(prodId, out, {woopi:w,stick:s,pack:pk}, entry);
     document.getElementById('b_memo').value=''; document.getElementById('b_outkg').value='';
     go('log');
   }catch(e){
@@ -890,7 +887,7 @@ function render(){
 /* ---------- cost calc ---------- */
 function num(id){return parseFloat(document.getElementById(id).value)||0;}
 function calcCost(){
-  const mat = num('b_woopi')*num('p_woopi') + num('b_vin')*num('p_vin') + num('b_stick')*num('p_stick') + num('b_pack')*num('p_pack');
+  const mat = num('b_woopi')*num('p_woopi') + num('b_stick')*num('p_stick') + num('b_pack')*num('p_pack');
   const lab = num('b_work')*num('p_wage');
   const ele = num('b_dry')*num('p_dry');
   const tot = mat+lab+ele;
@@ -911,7 +908,7 @@ function calcCost(){
     ${price>0?`<div class="r"><span>개당 한계이익</span><b class="${mp>=0?'pos':'neg'}">${w(mp)}원</b></div>
     <div class="r"><span>마진율</span><b class="${mp>=0?'pos':'neg'}">${mr.toFixed(1)}%</b></div>`:'<div class="r"><span style="color:var(--sub)">판매공급가 입력 시 마진 계산</span><b></b></div>'}`;
 }
-['p_woopi','p_vin','p_stick','p_pack','p_wage','p_dry','b_woopi','b_vin','b_stick','b_pack','b_work','b_dry','b_out','b_outkg','b_price']
+['p_woopi','p_stick','p_pack','p_wage','p_dry','b_woopi','b_stick','b_pack','b_work','b_dry','b_out','b_outkg','b_price']
   .forEach(id=>document.getElementById(id).addEventListener('input',calcCost));
 
 /* ---------- csv ---------- */

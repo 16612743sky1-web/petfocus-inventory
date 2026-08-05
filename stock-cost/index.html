@@ -156,7 +156,6 @@ input.f:focus,select.f:focus{outline:2px solid var(--blue);border-color:var(--bl
     <label class="f">품목</label>
     <select class="f" id="buyItem" onchange="fillBuyPrice()">
       <option value="woopi">우피 (원물) — kg</option>
-      <option value="vinegar">식초 (세척용) — L</option>
       <option value="stick">스틱 (심재) — 개</option>
       <option value="pack">포장지/라벨 — 세트</option>
     </select>
@@ -178,20 +177,18 @@ input.f:focus,select.f:focus{outline:2px solid var(--blue);border-color:var(--bl
   <div class="card" id="form-생산" style="display:none">
     <div class="frow">
       <div><label class="f">우피 투입 (kg)</label><input class="f" id="pWoopi" type="number" inputmode="decimal" placeholder="0" oninput="prevProd()"></div>
-      <div><label class="f">식초 사용 (L)</label><input class="f" id="pVinegar" type="number" inputmode="decimal" placeholder="0" oninput="prevProd()"></div>
-    </div>
-    <div class="frow">
       <div><label class="f">스틱 사용 (개)</label><input class="f" id="pStick" type="number" inputmode="numeric" placeholder="0" oninput="prevProd()"></div>
+    </div>
+    <div class="frow">
       <div><label class="f">포장지 사용 (세트)</label><input class="f" id="pPack" type="number" inputmode="numeric" placeholder="0" oninput="prevProd()"></div>
-    </div>
-    <div class="frow">
       <div><label class="f">건조 시간 (h)</label><input class="f" id="pDry" type="number" inputmode="decimal" value="12" oninput="prevProd()"></div>
-      <div><label class="f">작업 인시 (인×시간)</label><input class="f" id="pLabor" type="number" inputmode="decimal" placeholder="0" oninput="prevProd()"></div>
     </div>
     <div class="frow">
+      <div><label class="f">작업 인시 (인×시간)</label><input class="f" id="pLabor" type="number" inputmode="decimal" placeholder="0" oninput="prevProd()"></div>
       <div><label class="f">완성 수량 (개)</label><input class="f" id="pOut" type="number" inputmode="numeric" placeholder="0" oninput="prevProd()"></div>
-      <div><label class="f">완성 중량 (kg, 선택)</label><input class="f" id="pOutKg" type="number" inputmode="decimal" placeholder="수율 계산용" oninput="prevProd()"></div>
     </div>
+    <label class="f">완성 중량 (kg, 선택)</label>
+    <input class="f" id="pOutKg" type="number" inputmode="decimal" placeholder="수율 계산용" oninput="prevProd()">
     <label class="f">메모</label>
     <input class="f" id="pMemo" placeholder="예: 3차 배치, 건조기 2호">
     <div class="preview" id="prodPrev" style="display:none"></div>
@@ -225,7 +222,6 @@ input.f:focus,select.f:focus{outline:2px solid var(--blue);border-color:var(--bl
     <label class="f">대상</label>
     <select class="f" id="aTarget">
       <option value="woopi">우피 (kg)</option>
-      <option value="vinegar">식초 (L)</option>
       <option value="stick">스틱 (개)</option>
       <option value="pack">포장지 (세트)</option>
       <option value="finished">완제품 우피껌 (개)</option>
@@ -254,14 +250,13 @@ input.f:focus,select.f:focus{outline:2px solid var(--blue);border-color:var(--bl
     <div class="card-title">원가 시뮬레이터 <span class="sub">저장 안 됨 · 계산 전용</span></div>
     <div class="frow">
       <div><label class="f">우피 (kg)</label><input class="f" id="cWoopi" type="number" inputmode="decimal" value="10" oninput="calcSim()"></div>
-      <div><label class="f">식초 (L)</label><input class="f" id="cVinegar" type="number" inputmode="decimal" value="2" oninput="calcSim()"></div>
-    </div>
-    <div class="frow">
       <div><label class="f">스틱 (개)</label><input class="f" id="cStick" type="number" inputmode="numeric" value="50" oninput="calcSim()"></div>
-      <div><label class="f">포장 (세트)</label><input class="f" id="cPack" type="number" inputmode="numeric" value="50" oninput="calcSim()"></div>
     </div>
     <div class="frow">
+      <div><label class="f">포장 (세트)</label><input class="f" id="cPack" type="number" inputmode="numeric" value="50" oninput="calcSim()"></div>
       <div><label class="f">건조 (h)</label><input class="f" id="cDry" type="number" inputmode="decimal" value="12" oninput="calcSim()"></div>
+    </div>
+    <div class="frow">
       <div><label class="f">인시 (인×h)</label><input class="f" id="cLabor" type="number" inputmode="decimal" value="4" oninput="calcSim()"></div>
     </div>
     <div class="frow">
@@ -327,11 +322,11 @@ input.f:focus,select.f:focus{outline:2px solid var(--blue);border-color:var(--bl
 <script>
 'use strict';
 // ─── 상수 ───
-const MAT = {woopi:{nm:'우피 (원물)',unit:'kg'},vinegar:{nm:'식초 (세척용)',unit:'L'},stick:{nm:'스틱 (심재)',unit:'개'},pack:{nm:'포장지/라벨',unit:'세트'}};
-const PRICE_DEF = {woopi:15000,vinegar:2500,stick:150,pack:450,wage:10000,dryer:500};
-const PRICE_NM = {woopi:'우피 1kg',vinegar:'식초 1L',stick:'스틱 1개',pack:'포장 1세트',wage:'시급 (인건비)',dryer:'건조 전기료 /h'};
-const TH_DEF = {woopi:5,vinegar:2,stick:50,pack:50,finished:20};
-const TH_NM = {woopi:'우피 (kg)',vinegar:'식초 (L)',stick:'스틱 (개)',pack:'포장지 (세트)',finished:'완제품 (개)'};
+const MAT = {woopi:{nm:'우피 (원물)',unit:'kg'},stick:{nm:'스틱 (심재)',unit:'개'},pack:{nm:'포장지/라벨',unit:'세트'}};
+const PRICE_DEF = {woopi:15000,stick:150,pack:450,wage:10000,dryer:500};
+const PRICE_NM = {woopi:'우피 1kg',stick:'스틱 1개',pack:'포장 1세트',wage:'시급 (인건비)',dryer:'건조 전기료 /h'};
+const TH_DEF = {woopi:5,stick:50,pack:50,finished:20};
+const TH_NM = {woopi:'우피 (kg)',stick:'스틱 (개)',pack:'포장지 (세트)',finished:'완제품 (개)'};
 const TYPE_META = {매입:{ico:'🛒',bg:'#eff6ff'},생산:{ico:'🏭',bg:'#fef3c7'},판매:{ico:'💰',bg:'#f0fdf4'},조정:{ico:'🔧',bg:'#f1f5f9'}};
 const LS_KEY = 'petfocus_v1';
 
@@ -372,13 +367,13 @@ function addRecord(type, payload){
 
 // ─── 재고 계산 (기록에서 전량 재계산 — 단일 진실 원천) ───
 function computeStock(){
-  const mat = {woopi:0,vinegar:0,stick:0,pack:0};
+  const mat = {woopi:0,stick:0,pack:0};
   let finished = 0, prodCost = 0, prodUnits = 0;
   for(const r of state.records){
     if(r.deleted) continue;
     if(r.type==='매입') mat[r.item] += r.qty;
     else if(r.type==='생산'){
-      mat.woopi -= r.woopi; mat.vinegar -= r.vinegar; mat.stick -= r.stick; mat.pack -= r.pack;
+      mat.woopi -= r.woopi; mat.stick -= r.stick; mat.pack -= r.pack;
       finished += r.out; prodCost += r.cost; prodUnits += r.out;
     }
     else if(r.type==='판매') finished -= r.qty;
@@ -389,10 +384,10 @@ function computeStock(){
 }
 
 // ─── 생산 원가 ───
-function prodCostOf(w,v,s,pk,dry,labor){
+function prodCostOf(w,s,pk,dry,labor){
   const p = state.settings.prices;
   return {
-    material: w*p.woopi + v*p.vinegar + s*p.stick,
+    material: w*p.woopi + s*p.stick,
     pack: pk*p.pack,
     labor: labor*p.wage,
     power: dry*p.dryer,
@@ -451,14 +446,14 @@ function saveBuy(){
 }
 
 function prevProd(){
-  const w=num('pWoopi'),v=num('pVinegar'),s=num('pStick'),pk=num('pPack'),dry=num('pDry'),lb=num('pLabor'),out=num('pOut'),outKg=num('pOutKg');
+  const w=num('pWoopi'),s=num('pStick'),pk=num('pPack'),dry=num('pDry'),lb=num('pLabor'),out=num('pOut'),outKg=num('pOutKg');
   const el=$('prodPrev');
   if(w<=0&&out<=0){ el.style.display='none'; return; }
-  const c = prodCostOf(w,v,s,pk,dry,lb);
+  const c = prodCostOf(w,s,pk,dry,lb);
   const yieldPct = (w>0&&outKg>0)? (outKg/w*100).toFixed(1)+'%' : '- (완성 중량 입력 시)';
   el.style.display='block';
   el.innerHTML = `
-    <div class="pr-row"><span>재료비 (우피+식초+스틱)</span><b>${fmt(c.material)}원</b></div>
+    <div class="pr-row"><span>재료비 (우피+스틱)</span><b>${fmt(c.material)}원</b></div>
     <div class="pr-row"><span>포장비</span><b>${fmt(c.pack)}원</b></div>
     <div class="pr-row"><span>인건비 (${lb}인시)</span><b>${fmt(c.labor)}원</b></div>
     <div class="pr-row"><span>건조 전기료 (${dry}h)</span><b>${fmt(c.power)}원</b></div>
@@ -467,13 +462,13 @@ function prevProd(){
     <div class="pr-row"><span>수율 (완성kg÷투입kg)</span><b>${yieldPct}</b></div>`;
 }
 function saveProd(){
-  const w=num('pWoopi'),v=num('pVinegar'),s=num('pStick'),pk=num('pPack'),dry=num('pDry'),lb=num('pLabor'),out=num('pOut'),outKg=num('pOutKg');
+  const w=num('pWoopi'),s=num('pStick'),pk=num('pPack'),dry=num('pDry'),lb=num('pLabor'),out=num('pOut'),outKg=num('pOutKg');
   if(w<=0||out<=0) return toast('우피 투입량과 완성 수량은 필수입니다');
   const {mat} = computeStock();
   if(w>mat.woopi && !confirm(`우피 재고(${mat.woopi.toFixed(1)}kg)보다 많이 투입했습니다. 매입 기록 누락일 수 있습니다. 그래도 저장할까요?`)) return;
-  const c = prodCostOf(w,v,s,pk,dry,lb);
-  addRecord('생산', {woopi:w,vinegar:v,stick:s,pack:pk,dry,labor:lb,out,outKg,cost:c.total,memo:$('pMemo').value.trim()});
-  ['pWoopi','pVinegar','pStick','pPack','pLabor','pOut','pOutKg','pMemo'].forEach(i=>$(i).value='');
+  const c = prodCostOf(w,s,pk,dry,lb);
+  addRecord('생산', {woopi:w,stick:s,pack:pk,dry,labor:lb,out,outKg,cost:c.total,memo:$('pMemo').value.trim()});
+  ['pWoopi','pStick','pPack','pLabor','pOut','pOutKg','pMemo'].forEach(i=>$(i).value='');
   $('pDry').value=12; prevProd();
   toast(`생산 저장 · 개당 원가 ${fmt(c.total/out)}원`); renderStock();
 }
@@ -547,7 +542,7 @@ function delRec(id){
 
 // ─── 계산 탭 ───
 function calcSim(){
-  const c = prodCostOf(num('cWoopi'),num('cVinegar'),num('cStick'),num('cPack'),num('cDry'),num('cLabor'));
+  const c = prodCostOf(num('cWoopi'),num('cStick'),num('cPack'),num('cDry'),num('cLabor'));
   const out = num('cOut'), mg = Math.min(num('cMargin'),95)/100;
   const unit = out>0? c.total/out : 0;
   const b2c = mg<1? unit/(1-mg) : 0;
