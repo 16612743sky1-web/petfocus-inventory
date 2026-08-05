@@ -83,6 +83,15 @@ h2.sec{font-size:13px;color:var(--sub);font-weight:700;margin:22px 4px 10px;lett
 .badge-out{display:inline-block;font-size:11.5px;font-weight:800;color:#fff;background:var(--out);border-radius:7px;padding:2px 8px;margin-top:2px}
 @keyframes rise{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
 
+/* materials (원재료) */
+.matgrid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:2px 0 6px}
+.matgrid .mcard{padding:12px 13px}
+.matgrid .mcard .mn{font-size:12.5px;color:var(--sub);font-weight:700}
+.matgrid .mcard .mv{font-size:20px;font-weight:800;margin-top:4px;font-variant-numeric:tabular-nums}
+.matgrid .mcard .mv small{font-size:12px;color:var(--sub);margin-left:2px;font-weight:600}
+.matgrid .mcard.low{border-color:#e6c887;background:linear-gradient(0deg,var(--warnbg),var(--paper))}
+.matgrid .mcard.low .mv{color:var(--warn)}
+
 /* low-stock summary */
 .lowbox{border:1.5px solid #e6c887;background:linear-gradient(180deg,#fdf1d6,var(--paper));border-radius:var(--r);padding:13px 14px 8px;margin:2px 0 6px;box-shadow:var(--shadow)}
 .lowbox.hasout{border-color:#e2ad9b;background:linear-gradient(180deg,#fbe7de,var(--paper))}
@@ -212,6 +221,9 @@ nav button.sel{color:var(--brand)}
     <div class="card alert"><div class="n" id="sLow">0</div><div class="l" id="sLowL">보충 필요</div></div>
   </div>
   <div id="lowAlert"></div>
+  <div class="rowtools">
+    <button onclick="openAdjModal()">🔧 재고 조정 (실사·파손)</button>
+  </div>
   <h2 class="sec">품목별 현재재고</h2>
   <div id="stockList"></div>
 </section>
@@ -272,11 +284,17 @@ nav button.sel{color:var(--brand)}
 
 <!-- 원가 -->
 <section class="tab" id="t-cost">
+  <h2 class="sec">원재료 재고</h2>
+  <div id="matGrid" class="matgrid"></div>
+  <div class="rowtools">
+    <button onclick="openMatModal('buy')">＋ 매입 입력</button>
+    <button onclick="openMatModal('adj')">🔧 조정 (폐기·실사차이)</button>
+  </div>
+
   <h2 class="sec">단가표 (수정 가능)</h2>
   <div class="card" style="padding:6px 14px">
     <table class="tbl">
       <tr><td>우피(원물) /kg</td><td><input type="number" id="p_woopi" value="15000"></td></tr>
-      <tr><td>식초(세척) /L</td><td><input type="number" id="p_vin" value="2500"></td></tr>
       <tr><td>스틱(심재) /개</td><td><input type="number" id="p_stick" value="150"></td></tr>
       <tr><td>포장·라벨 /세트</td><td><input type="number" id="p_pack" value="450"></td></tr>
       <tr><td>인건비 시급 /h</td><td><input type="number" id="p_wage" value="10000"></td></tr>
@@ -284,22 +302,26 @@ nav button.sel{color:var(--brand)}
     </table>
   </div>
 
-  <h2 class="sec">1회 배치 투입량</h2>
-  <div class="card" style="padding:6px 14px">
+  <h2 class="sec">생산 배치 저장</h2>
+  <div class="card" style="padding:16px 15px 20px">
+    <label class="f">생산 제품</label>
+    <select id="b_prod"></select>
     <table class="tbl">
       <tr><td>우피 투입 (kg)</td><td><input type="number" id="b_woopi" value="1" step="0.1"></td></tr>
-      <tr><td>식초 사용 (L)</td><td><input type="number" id="b_vin" value="1" step="0.1"></td></tr>
       <tr><td>스틱 (개)</td><td><input type="number" id="b_stick" value="30"></td></tr>
       <tr><td>포장 (세트)</td><td><input type="number" id="b_pack" value="30"></td></tr>
       <tr><td>작업 시간 (h)</td><td><input type="number" id="b_work" value="2" step="0.5"></td></tr>
       <tr><td>건조 시간 (h)</td><td><input type="number" id="b_dry" value="12"></td></tr>
       <tr><td>산출 수량 (개)</td><td><input type="number" id="b_out" value="30"></td></tr>
+      <tr><td>완성 중량 (kg, 선택)</td><td><input type="number" id="b_outkg" step="0.1" placeholder="수율 계산용"></td></tr>
       <tr><td>개당 판매공급가 (원)</td><td><input type="number" id="b_price" value="0"></td></tr>
     </table>
+    <label class="f">메모 (선택)</label>
+    <input id="b_memo" type="text" placeholder="예) 3차 배치, 건조기 2호">
+    <div class="card result" id="costRes"></div>
+    <button class="save" id="batchSaveBtn" onclick="saveBatch()">배치 저장 (재고 반영)</button>
   </div>
-
-  <div class="card result" id="costRes"></div>
-  <p class="hint">※ 마진은 <b>부가세 제외 공급가</b> 기준입니다. 소비자가에 부가세가 포함돼 있으면 공급가 = 소비자가 ÷ 1.1 로 넣으세요.<br>※ 노무·전기는 배치당 실제 소요를 나누므로, 여러 종류를 한 배치에 말리면 시간을 산출개수 비율로 안분하세요.</p>
+  <p class="hint">※ 배치 저장 시 원재료 재고가 차감되고 선택한 제품 재고가 늘어나며, 이력 탭에 원가·수율과 함께 기록됩니다.<br>※ 마진은 <b>부가세 제외 공급가</b> 기준입니다. 소비자가에 부가세가 포함돼 있으면 공급가 = 소비자가 ÷ 1.1 로 넣으세요.<br>※ 노무·전기는 배치당 실제 소요를 나누므로, 여러 종류를 한 배치에 말리면 시간을 산출개수 비율로 안분하세요.</p>
 </section>
 
 </div>
@@ -319,6 +341,44 @@ nav button.sel{color:var(--brand)}
     <div class="mbtns">
       <button class="mcancel" onclick="closeMinModal()">취소</button>
       <button class="msave" id="minSaveBtn" onclick="saveMinModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 원재료 매입/조정 모달 -->
+<div id="matModal" class="modal-bg" style="display:none" onclick="if(event.target===this)closeMatModal()">
+  <div class="modal">
+    <div class="mtitle" id="matTitle">원재료 매입</div>
+    <div class="mdesc" id="matDesc"></div>
+    <label class="f">원재료</label>
+    <select id="matSelect"></select>
+    <label class="f" id="matQtyLabel">매입 수량</label>
+    <input id="matQty" type="number" inputmode="decimal" step="0.1" placeholder="0">
+    <label class="f" id="matReasonLabel">메모 (선택)</label>
+    <input id="matReason" type="text" placeholder="예) OO축산 매입">
+    <div id="matErr" class="merr"></div>
+    <div class="mbtns">
+      <button class="mcancel" onclick="closeMatModal()">취소</button>
+      <button class="msave" id="matSaveBtn" onclick="saveMatModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 완제품 재고 조정 모달 -->
+<div id="adjModal" class="modal-bg" style="display:none" onclick="if(event.target===this)closeAdjModal()">
+  <div class="modal">
+    <div class="mtitle">재고 조정</div>
+    <div class="mdesc">실사 차이·파손·폐기 등 재고 증감을 기록합니다. 감소는 음수로 입력하세요.</div>
+    <label class="f">제품</label>
+    <select id="adjSelect"></select>
+    <label class="f">증감 수량 (감소는 음수)</label>
+    <input id="adjQty" type="number" inputmode="numeric" placeholder="0">
+    <label class="f">조정 사유 (필수)</label>
+    <input id="adjReason" type="text" placeholder="예) 실사 차이, 파손 폐기">
+    <div id="adjErr" class="merr"></div>
+    <div class="mbtns">
+      <button class="mcancel" onclick="closeAdjModal()">취소</button>
+      <button class="msave" id="adjSaveBtn" onclick="saveAdjModal()">저장</button>
     </div>
   </div>
 </div>
@@ -375,8 +435,17 @@ const CATS = [
 ];
 function categoryOf(name){ return name.startsWith('맘엔펫') ? 'buy' : 'made'; }
 
-let state = { products:[], logs:[], user:'형' };
+/* 원재료: 고정 4종. 재고 수치만 DB에 저장하고, 이름·단위·기준치는 코드 상수로 관리(SEED/LOW와 같은 방식) */
+const MAT_META = {
+  woopi:   { name:'우피 (원물)',   unit:'kg',  min:5 },
+  stick:   { name:'스틱 (심재)',   unit:'개',  min:50 },
+  pack:    { name:'포장지/라벨',   unit:'세트', min:50 },
+};
+const MAT_ORDER = ['woopi','stick','pack'];
+
+let state = { products:[], logs:[], materials:[], user:'형' };
 let type='out', chan='네이버스토어';
+let matModalMode='buy';
 let FS = null; // firestore handle when online
 
 /* ---------- storage layer ---------- */
@@ -402,8 +471,19 @@ async function initStore(){
           await fs.setDoc(fs.doc(db,'products',String(i)), {...SEED[i], order:i});
         }
       }
+      // seed materials once (재고 0으로 시작 — 이름/단위/기준치는 MAT_META 코드 상수)
+      const mSnap = await fs.getDocs(fs.collection(db,'materials'));
+      if(mSnap.empty){
+        for(const id of MAT_ORDER){
+          await fs.setDoc(fs.doc(db,'materials',id), {stock:0});
+        }
+      }
       fs.onSnapshot(fs.collection(db,'products'), s=>{
         state.products = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.order-b.order);
+        render();
+      });
+      fs.onSnapshot(fs.collection(db,'materials'), s=>{
+        state.materials = s.docs.map(d=>({id:d.id,...d.data()}));
         render();
       });
       fs.onSnapshot(fs.query(fs.collection(db,'logs'), fs.orderBy('ts','desc'), fs.limit(300)), s=>{
@@ -417,12 +497,18 @@ async function initStore(){
   // localStorage fallback
   document.getElementById('offBanner').style.display='block';
   const raw = localStorage.getItem('pf_state');
-  if(raw){ const d=JSON.parse(raw); state.products=d.products; state.logs=d.logs; }
-  else { state.products = SEED.map((p,i)=>({id:String(i),...p,order:i})); state.logs=[]; }
+  if(raw){
+    const d=JSON.parse(raw);
+    state.products=d.products; state.logs=d.logs;
+    state.materials = d.materials || MAT_ORDER.map(id=>({id,stock:0}));
+  }else{
+    state.products = SEED.map((p,i)=>({id:String(i),...p,order:i})); state.logs=[];
+    state.materials = MAT_ORDER.map(id=>({id,stock:0}));
+  }
   setSync(false);
   render();
 }
-function saveLocal(){ if(!FS) localStorage.setItem('pf_state', JSON.stringify({products:state.products,logs:state.logs})); }
+function saveLocal(){ if(!FS) localStorage.setItem('pf_state', JSON.stringify({products:state.products,logs:state.logs,materials:state.materials})); }
 function setSync(on){
   const el=document.getElementById('sync');
   el.className='sync '+(on?'on':'off');
@@ -479,12 +565,38 @@ async function commitMove(prodId, delta, entry){
 }
 async function removeLog(log){
   if(!confirm('이 기록을 삭제하고 재고를 되돌릴까요?')) return;
-  const revert = log.type==='in' ? -log.qty : log.qty;
+  if(log.kind==='material'){
+    if(FS){
+      try{
+        const batch = FS.writeBatch(FS.db);
+        batch.update(FS.doc(FS.db,'materials',log.matId), {stock: FS.increment(-log.qty)});
+        batch.delete(FS.doc(FS.db,'logs',log.id));
+        await batch.commit();
+      }catch(e){
+        console.error('삭제 실패',e);
+        alert('삭제에 실패했습니다.\n네트워크 상태나 Firebase 권한을 확인해 주세요.');
+      }
+    }else{
+      const m=state.materials.find(x=>x.id===log.matId);
+      if(m) m.stock=(m.stock||0)-log.qty;
+      state.logs=state.logs.filter(l=>l.id!==log.id);
+      saveLocal(); render();
+    }
+    return;
+  }
+  // in: 되돌리려면 -qty, out: +qty, adj: qty가 이미 부호를 가지므로 -qty
+  const revert = log.type==='in' ? -log.qty : (log.type==='out' ? log.qty : -log.qty);
   if(FS){
     try{
       const batch = FS.writeBatch(FS.db);
       if(state.products.some(x=>x.id===log.pid))
         batch.update(FS.doc(FS.db,'products',log.pid), {stock: FS.increment(revert)});
+      if(log.matUsed){
+        MAT_ORDER.forEach(id=>{
+          const u=log.matUsed[id]||0;
+          if(u) batch.update(FS.doc(FS.db,'materials',id), {stock: FS.increment(u)});
+        });
+      }
       batch.delete(FS.doc(FS.db,'logs',log.id));
       await batch.commit();
     }catch(e){
@@ -494,8 +606,128 @@ async function removeLog(log){
   }else{
     const p=state.products.find(x=>x.id===log.pid);
     if(p) p.stock=(p.stock||0)+revert;
+    if(log.matUsed){
+      MAT_ORDER.forEach(id=>{
+        const u=log.matUsed[id]||0;
+        if(u){ const m=state.materials.find(x=>x.id===id); if(m) m.stock=(m.stock||0)+u; }
+      });
+    }
     state.logs=state.logs.filter(l=>l.id!==log.id);
     saveLocal(); render();
+  }
+}
+
+/* ---------- materials (원재료 매입/조정) ---------- */
+function matStock(id){ const m=state.materials.find(x=>x.id===id); return m?(m.stock||0):0; }
+async function commitMatMove(id, delta, entry){
+  if(FS){
+    const batch = FS.writeBatch(FS.db);
+    batch.update(FS.doc(FS.db,'materials',id), {stock: FS.increment(delta)});
+    batch.set(FS.doc(FS.collection(FS.db,'logs')), entry);
+    await batch.commit();
+  }else{
+    const m=state.materials.find(x=>x.id===id);
+    if(m) m.stock=(m.stock||0)+delta;
+    state.logs.unshift({id:'l'+Date.now(), ...entry});
+    saveLocal(); render();
+  }
+}
+function openMatModal(mode){
+  matModalMode = mode;
+  document.getElementById('matTitle').textContent = mode==='buy' ? '원재료 매입' : '원재료 조정';
+  document.getElementById('matDesc').textContent = mode==='buy'
+    ? '입고된 원재료 수량을 재고에 더합니다.'
+    : '폐기·시식 증정·실사 차이 등 재고 증감을 기록합니다. 감소는 음수로 입력하세요.';
+  document.getElementById('matQtyLabel').textContent = mode==='buy' ? '매입 수량' : '증감 수량 (감소는 음수)';
+  document.getElementById('matReasonLabel').textContent = mode==='buy' ? '메모 (선택)' : '조정 사유 (필수)';
+  document.getElementById('matSelect').innerHTML = MAT_ORDER.map(id=>`<option value="${id}">${MAT_META[id].name} (${MAT_META[id].unit})</option>`).join('');
+  document.getElementById('matQty').value='';
+  document.getElementById('matReason').value='';
+  document.getElementById('matErr').textContent='';
+  document.getElementById('matModal').style.display='flex';
+}
+function closeMatModal(){ document.getElementById('matModal').style.display='none'; }
+async function saveMatModal(){
+  const id=document.getElementById('matSelect').value;
+  const qRaw=parseFloat(document.getElementById('matQty').value);
+  const memo=document.getElementById('matReason').value.trim();
+  const err=document.getElementById('matErr');
+  if(!qRaw){ err.textContent='0이 아닌 수량을 입력하세요'; return; }
+  if(matModalMode==='buy' && qRaw<=0){ err.textContent='매입 수량은 0보다 커야 합니다'; return; }
+  if(matModalMode==='adj' && !memo){ err.textContent='조정 사유는 필수입니다'; return; }
+  const delta = matModalMode==='buy' ? Math.abs(qRaw) : qRaw;
+  const btn=document.getElementById('matSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
+  err.textContent='';
+  const dLabel=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  const entry={ kind:'material', matId:id, matName:MAT_META[id].name, mkind:matModalMode,
+    qty:delta, user:state.user, memo, ts:Date.now(), date:dLabel };
+  try{
+    await commitMatMove(id, delta, entry);
+    closeMatModal();
+  }catch(e){
+    console.error('원재료 저장 실패',e);
+    err.textContent='저장 실패 — 네트워크·권한을 확인하세요';
+  }finally{
+    btn.disabled=false; btn.textContent='저장';
+  }
+}
+
+/* ---------- 생산 배치 저장 (원재료 차감 + 제품 증가 + 이력 기록, 원자적) ---------- */
+async function commitBatch(prodId, outQty, used, entry){
+  if(FS){
+    const batch = FS.writeBatch(FS.db);
+    batch.update(FS.doc(FS.db,'products',prodId), {stock: FS.increment(outQty)});
+    MAT_ORDER.forEach(id=>{
+      const u=used[id]||0;
+      if(u) batch.update(FS.doc(FS.db,'materials',id), {stock: FS.increment(-u)});
+    });
+    batch.set(FS.doc(FS.collection(FS.db,'logs')), entry);
+    await batch.commit();
+  }else{
+    const p=state.products.find(x=>x.id===prodId);
+    if(p) p.stock=(p.stock||0)+outQty;
+    MAT_ORDER.forEach(id=>{
+      const u=used[id]||0;
+      if(u){ const m=state.materials.find(x=>x.id===id); if(m) m.stock=(m.stock||0)-u; }
+    });
+    state.logs.unshift({id:'l'+Date.now(), ...entry});
+    saveLocal(); render();
+  }
+}
+async function saveBatch(){
+  const prodId=document.getElementById('b_prod').value;
+  const p=state.products.find(x=>x.id===prodId);
+  const w=num('b_woopi'), s=num('b_stick'), pk=num('b_pack'),
+        work=num('b_work'), dry=num('b_dry'), out=parseInt(document.getElementById('b_out').value)||0,
+        outkg=num('b_outkg');
+  if(!p){ alert('생산 제품을 선택하세요'); return; }
+  if(w<=0 || out<=0){ alert('우피 투입량과 산출 수량을 확인하세요'); return; }
+  const curWoopi=matStock('woopi');
+  if(w>curWoopi && !confirm(`우피 재고(${curWoopi}kg)보다 많이 투입합니다. 매입 입력을 놓치진 않았나요? 계속할까요?`)) return;
+
+  const mat = w*num('p_woopi') + s*num('p_stick') + pk*num('p_pack');
+  const lab = work*num('p_wage');
+  const ele = dry*num('p_dry');
+  const tot = mat+lab+ele;
+  const unitCost = tot/out;
+  const yieldPct = (w>0 && outkg>0) ? +(outkg/w*100).toFixed(1) : null;
+
+  const btn=document.getElementById('batchSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
+  const dLabel=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  const memo=document.getElementById('b_memo').value.trim();
+  const entry={ pid:prodId, pname:p.name, type:'in', qty:out, chan:'생산입고', user:state.user,
+    memo, ts:Date.now(), date:dLabel,
+    matUsed:{woopi:w,stick:s,pack:pk},
+    unitCost:Math.round(unitCost), yieldPct };
+  try{
+    await commitBatch(prodId, out, {woopi:w,stick:s,pack:pk}, entry);
+    document.getElementById('b_memo').value=''; document.getElementById('b_outkg').value='';
+    go('log');
+  }catch(e){
+    console.error('배치 저장 실패',e);
+    alert('저장에 실패했습니다.\n네트워크 상태나 Firebase 권한을 확인해 주세요.');
+  }finally{
+    btn.disabled=false; btn.textContent='배치 저장 (재고 반영)';
   }
 }
 
@@ -537,6 +769,46 @@ async function saveMove(){
   }catch(e){
     console.error('저장 실패',e);
     alert('저장에 실패했습니다.\n네트워크 상태나 Firebase 권한을 확인해 주세요.');
+  }finally{
+    btn.disabled=false; btn.textContent='저장';
+  }
+}
+
+/* ---------- 완제품 재고 조정 (실사·파손 등) ---------- */
+function openAdjModal(){
+  const sel=document.getElementById('adjSelect');
+  sel.innerHTML=CATS.map(cat=>{
+    const items=state.products.filter(p=>categoryOf(p.name)===cat.key);
+    if(!items.length) return '';
+    const opts=items.map(p=>`<option value="${p.id}">${esc(p.name)} (재고 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
+    return `<optgroup label="${esc(cat.label)}">${opts}</optgroup>`;
+  }).join('');
+  document.getElementById('adjQty').value='';
+  document.getElementById('adjReason').value='';
+  document.getElementById('adjErr').textContent='';
+  document.getElementById('adjModal').style.display='flex';
+}
+function closeAdjModal(){ document.getElementById('adjModal').style.display='none'; }
+async function saveAdjModal(){
+  const pid=document.getElementById('adjSelect').value;
+  const p=state.products.find(x=>x.id===pid);
+  const qRaw=parseFloat(document.getElementById('adjQty').value);
+  const memo=document.getElementById('adjReason').value.trim();
+  const err=document.getElementById('adjErr');
+  if(!p){ err.textContent='제품을 선택하세요'; return; }
+  if(!qRaw){ err.textContent='0이 아닌 수량을 입력하세요'; return; }
+  if(!memo){ err.textContent='조정 사유는 필수입니다'; return; }
+  if((p.stock||0)+qRaw<0 && !confirm('조정 후 재고가 음수가 됩니다. 계속할까요?')) return;
+  const btn=document.getElementById('adjSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
+  err.textContent='';
+  const dLabel=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  const entry={ pid, pname:p.name, type:'adj', qty:qRaw, chan:'재고조정', user:state.user, memo, ts:Date.now(), date:dLabel };
+  try{
+    await commitMove(pid, qRaw, entry);
+    closeAdjModal();
+  }catch(e){
+    console.error('재고 조정 저장 실패',e);
+    err.textContent='저장 실패 — 네트워크·권한을 확인하세요';
   }finally{
     btn.disabled=false; btn.textContent='저장';
   }
@@ -631,28 +903,65 @@ function render(){
   }).join('');
   if(cur) sel.value=cur; updatePreview();
 
-  // logs
+  // materials (원재료 재고)
+  const mBox=document.getElementById('matGrid');
+  if(mBox){
+    mBox.innerHTML = MAT_ORDER.map(id=>{
+      const meta=MAT_META[id];
+      const stock=matStock(id);
+      const low=stock<meta.min;
+      return `<div class="card mcard${low?' low':''}">
+        <div class="mn">${meta.name}${low?' <span class="badge-low">부족</span>':''}</div>
+        <div class="mv">${(+stock.toFixed(2)).toLocaleString()}<small>${meta.unit}</small></div>
+      </div>`;
+    }).join('');
+  }
+  // 생산 배치용 제품 선택 (자체생산만)
+  const bSel=document.getElementById('b_prod');
+  if(bSel){
+    const madeItems=state.products.filter(p=>categoryOf(p.name)==='made');
+    const curB=bSel.value;
+    bSel.innerHTML=madeItems.map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('');
+    if(curB && madeItems.some(p=>p.id===curB)) bSel.value=curB;
+  }
+
+  // logs (제품 입출고 + 원재료 매입/조정)
   const ll=document.getElementById('logList');
   if(!state.logs.length){ ll.innerHTML='<div class="empty">아직 기록이 없습니다.<br>입출고 탭에서 첫 기록을 남겨보세요.</div>'; }
-  else ll.innerHTML=state.logs.map(l=>`
-    <div class="card log">
-      <span class="tag ${l.type}">${l.type==='in'?'입고':'출고'}</span>
-      <div class="li"><b>${esc(l.pname)}</b><small>${esc(l.date)} · ${esc(l.chan)} · ${esc(l.user)}${l.memo?' · '+esc(l.memo):''}</small></div>
-      <span class="amt ${l.type}">${l.type==='in'?'+':'−'}${l.qty}</span>
+  else ll.innerHTML=state.logs.map(l=>{
+    if(l.kind==='material'){
+      const plus=l.qty>=0;
+      return `<div class="card log">
+        <span class="tag ${plus?'in':'out'}">${l.mkind==='buy'?'매입':'조정'}</span>
+        <div class="li"><b>${esc(l.matName)}</b><small>${esc(l.date)} · ${esc(l.user)}${l.memo?' · '+esc(l.memo):''}</small></div>
+        <span class="amt ${plus?'in':'out'}">${plus?'+':''}${l.qty}</span>
+        <button class="del" onclick='removeLog(${JSON.stringify(l).replace(/'/g,"&#39;")})'>✕</button>
+      </div>`;
+    }
+    const tagCls = l.type==='out' ? 'out' : (l.type==='adj' ? (l.qty>=0?'in':'out') : 'in');
+    const tagLbl = l.type==='in'?'입고':(l.type==='out'?'출고':'조정');
+    const amtTxt = l.type==='in' ? '+'+l.qty : (l.type==='out' ? '−'+l.qty : (l.qty>=0?'+':'')+l.qty);
+    return `<div class="card log">
+      <span class="tag ${tagCls}">${tagLbl}</span>
+      <div class="li"><b>${esc(l.pname)}</b><small>${esc(l.date)} · ${esc(l.chan)} · ${esc(l.user)}${l.memo?' · '+esc(l.memo):''}${l.unitCost?' · 개당 '+l.unitCost.toLocaleString()+'원':''}${l.yieldPct!=null?' · 수율 '+l.yieldPct+'%':''}</small></div>
+      <span class="amt ${tagCls}">${amtTxt}</span>
       <button class="del" onclick='removeLog(${JSON.stringify(l).replace(/'/g,"&#39;")})'>✕</button>
-    </div>`).join('');
+    </div>`;
+  }).join('');
 }
 
 /* ---------- cost calc ---------- */
 function num(id){return parseFloat(document.getElementById(id).value)||0;}
 function calcCost(){
-  const mat = num('b_woopi')*num('p_woopi') + num('b_vin')*num('p_vin') + num('b_stick')*num('p_stick') + num('b_pack')*num('p_pack');
+  const mat = num('b_woopi')*num('p_woopi') + num('b_stick')*num('p_stick') + num('b_pack')*num('p_pack');
   const lab = num('b_work')*num('p_wage');
   const ele = num('b_dry')*num('p_dry');
   const tot = mat+lab+ele;
   const out = Math.max(1,num('b_out'));
   const per = tot/out;
   const price = num('b_price');
+  const inkg = num('b_woopi'), outkg = num('b_outkg');
+  const yieldPct = (inkg>0 && outkg>0) ? (outkg/inkg*100) : null;
   const mp = price-per, mr = price>0?mp/price*100:0;
   const w=n=>Math.round(n).toLocaleString();
   document.getElementById('costRes').innerHTML=`
@@ -661,16 +970,17 @@ function calcCost(){
     <div class="r"><span>전기(건조)</span><b>${w(ele)}원</b></div>
     <div class="r"><span>배치 총 제조원가</span><b>${w(tot)}원</b></div>
     <div class="r big"><span>개당 원가</span><b>${w(per)}원</b></div>
+    ${yieldPct!=null?`<div class="r"><span>수율 (완성kg÷투입kg)</span><b>${yieldPct.toFixed(1)}%</b></div>`:''}
     ${price>0?`<div class="r"><span>개당 한계이익</span><b class="${mp>=0?'pos':'neg'}">${w(mp)}원</b></div>
     <div class="r"><span>마진율</span><b class="${mp>=0?'pos':'neg'}">${mr.toFixed(1)}%</b></div>`:'<div class="r"><span style="color:var(--sub)">판매공급가 입력 시 마진 계산</span><b></b></div>'}`;
 }
-['p_woopi','p_vin','p_stick','p_pack','p_wage','p_dry','b_woopi','b_vin','b_stick','b_pack','b_work','b_dry','b_out','b_price']
+['p_woopi','p_stick','p_pack','p_wage','p_dry','b_woopi','b_stick','b_pack','b_work','b_dry','b_out','b_outkg','b_price']
   .forEach(id=>document.getElementById(id).addEventListener('input',calcCost));
 
 /* ---------- csv ---------- */
 function exportCSV(){
   const rows=[['날짜','제품','유형','수량','판매처','담당','메모']];
-  state.logs.forEach(l=>rows.push([l.date,l.pname,l.type==='in'?'입고':'출고',l.qty,l.chan,l.user,l.memo||'']));
+  state.logs.filter(l=>l.kind!=='material').forEach(l=>rows.push([l.date,l.pname,l.type==='in'?'입고':(l.type==='out'?'출고':'조정'),l.qty,l.chan,l.user,l.memo||'']));
   const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download='펫포커스_입출고_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
