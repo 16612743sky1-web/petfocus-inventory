@@ -221,6 +221,9 @@ nav button.sel{color:var(--brand)}
     <div class="card alert"><div class="n" id="sLow">0</div><div class="l" id="sLowL">보충 필요</div></div>
   </div>
   <div id="lowAlert"></div>
+  <div class="rowtools">
+    <button onclick="openAdjModal()">🔧 재고 조정 (실사·파손)</button>
+  </div>
   <h2 class="sec">품목별 현재재고</h2>
   <div id="stockList"></div>
 </section>
@@ -357,6 +360,25 @@ nav button.sel{color:var(--brand)}
     <div class="mbtns">
       <button class="mcancel" onclick="closeMatModal()">취소</button>
       <button class="msave" id="matSaveBtn" onclick="saveMatModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 완제품 재고 조정 모달 -->
+<div id="adjModal" class="modal-bg" style="display:none" onclick="if(event.target===this)closeAdjModal()">
+  <div class="modal">
+    <div class="mtitle">재고 조정</div>
+    <div class="mdesc">실사 차이·파손·폐기 등 재고 증감을 기록합니다. 감소는 음수로 입력하세요.</div>
+    <label class="f">제품</label>
+    <select id="adjSelect"></select>
+    <label class="f">증감 수량 (감소는 음수)</label>
+    <input id="adjQty" type="number" inputmode="numeric" placeholder="0">
+    <label class="f">조정 사유 (필수)</label>
+    <input id="adjReason" type="text" placeholder="예) 실사 차이, 파손 폐기">
+    <div id="adjErr" class="merr"></div>
+    <div class="mbtns">
+      <button class="mcancel" onclick="closeAdjModal()">취소</button>
+      <button class="msave" id="adjSaveBtn" onclick="saveAdjModal()">저장</button>
     </div>
   </div>
 </div>
@@ -562,7 +584,8 @@ async function removeLog(log){
     }
     return;
   }
-  const revert = log.type==='in' ? -log.qty : log.qty;
+  // in: 되돌리려면 -qty, out: +qty, adj: qty가 이미 부호를 가지므로 -qty
+  const revert = log.type==='in' ? -log.qty : (log.type==='out' ? log.qty : -log.qty);
   if(FS){
     try{
       const batch = FS.writeBatch(FS.db);
@@ -751,6 +774,46 @@ async function saveMove(){
   }
 }
 
+/* ---------- 완제품 재고 조정 (실사·파손 등) ---------- */
+function openAdjModal(){
+  const sel=document.getElementById('adjSelect');
+  sel.innerHTML=CATS.map(cat=>{
+    const items=state.products.filter(p=>categoryOf(p.name)===cat.key);
+    if(!items.length) return '';
+    const opts=items.map(p=>`<option value="${p.id}">${esc(p.name)} (재고 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
+    return `<optgroup label="${esc(cat.label)}">${opts}</optgroup>`;
+  }).join('');
+  document.getElementById('adjQty').value='';
+  document.getElementById('adjReason').value='';
+  document.getElementById('adjErr').textContent='';
+  document.getElementById('adjModal').style.display='flex';
+}
+function closeAdjModal(){ document.getElementById('adjModal').style.display='none'; }
+async function saveAdjModal(){
+  const pid=document.getElementById('adjSelect').value;
+  const p=state.products.find(x=>x.id===pid);
+  const qRaw=parseFloat(document.getElementById('adjQty').value);
+  const memo=document.getElementById('adjReason').value.trim();
+  const err=document.getElementById('adjErr');
+  if(!p){ err.textContent='제품을 선택하세요'; return; }
+  if(!qRaw){ err.textContent='0이 아닌 수량을 입력하세요'; return; }
+  if(!memo){ err.textContent='조정 사유는 필수입니다'; return; }
+  if((p.stock||0)+qRaw<0 && !confirm('조정 후 재고가 음수가 됩니다. 계속할까요?')) return;
+  const btn=document.getElementById('adjSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
+  err.textContent='';
+  const dLabel=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  const entry={ pid, pname:p.name, type:'adj', qty:qRaw, chan:'재고조정', user:state.user, memo, ts:Date.now(), date:dLabel };
+  try{
+    await commitMove(pid, qRaw, entry);
+    closeAdjModal();
+  }catch(e){
+    console.error('재고 조정 저장 실패',e);
+    err.textContent='저장 실패 — 네트워크·권한을 확인하세요';
+  }finally{
+    btn.disabled=false; btn.textContent='저장';
+  }
+}
+
 /* ---------- helpers ---------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function jumpTo(id){ document.getElementById('mProd').value=id; setType('in'); go('move'); updatePreview(); }
@@ -875,10 +938,13 @@ function render(){
         <button class="del" onclick='removeLog(${JSON.stringify(l).replace(/'/g,"&#39;")})'>✕</button>
       </div>`;
     }
+    const tagCls = l.type==='out' ? 'out' : (l.type==='adj' ? (l.qty>=0?'in':'out') : 'in');
+    const tagLbl = l.type==='in'?'입고':(l.type==='out'?'출고':'조정');
+    const amtTxt = l.type==='in' ? '+'+l.qty : (l.type==='out' ? '−'+l.qty : (l.qty>=0?'+':'')+l.qty);
     return `<div class="card log">
-      <span class="tag ${l.type}">${l.type==='in'?'입고':'출고'}</span>
+      <span class="tag ${tagCls}">${tagLbl}</span>
       <div class="li"><b>${esc(l.pname)}</b><small>${esc(l.date)} · ${esc(l.chan)} · ${esc(l.user)}${l.memo?' · '+esc(l.memo):''}${l.unitCost?' · 개당 '+l.unitCost.toLocaleString()+'원':''}${l.yieldPct!=null?' · 수율 '+l.yieldPct+'%':''}</small></div>
-      <span class="amt ${l.type}">${l.type==='in'?'+':'−'}${l.qty}</span>
+      <span class="amt ${tagCls}">${amtTxt}</span>
       <button class="del" onclick='removeLog(${JSON.stringify(l).replace(/'/g,"&#39;")})'>✕</button>
     </div>`;
   }).join('');
@@ -914,7 +980,7 @@ function calcCost(){
 /* ---------- csv ---------- */
 function exportCSV(){
   const rows=[['날짜','제품','유형','수량','판매처','담당','메모']];
-  state.logs.filter(l=>l.kind!=='material').forEach(l=>rows.push([l.date,l.pname,l.type==='in'?'입고':'출고',l.qty,l.chan,l.user,l.memo||'']));
+  state.logs.filter(l=>l.kind!=='material').forEach(l=>rows.push([l.date,l.pname,l.type==='in'?'입고':(l.type==='out'?'출고':'조정'),l.qty,l.chan,l.user,l.memo||'']));
   const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download='펫포커스_입출고_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
