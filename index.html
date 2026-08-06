@@ -368,11 +368,12 @@ nav button.sel{color:var(--brand)}
 <div id="adjModal" class="modal-bg" style="display:none" onclick="if(event.target===this)closeAdjModal()">
   <div class="modal">
     <div class="mtitle">재고 조정</div>
-    <div class="mdesc">실사 차이·파손·폐기 등 재고 증감을 기록합니다. 감소는 음수로 입력하세요.</div>
+    <div class="mdesc">실사 차이·파손·폐기 등으로 재고가 달라졌을 때, <b>실제로 세어본 수량</b>을 그대로 입력하세요. 차이는 자동으로 계산됩니다.</div>
     <label class="f">제품</label>
-    <select id="adjSelect"></select>
-    <label class="f">증감 수량 (감소는 음수)</label>
+    <select id="adjSelect" onchange="onAdjProductChange()"></select>
+    <label class="f">실제 재고 수량</label>
     <input id="adjQty" type="number" inputmode="numeric" placeholder="0">
+    <div id="adjCur" class="munit"></div>
     <label class="f">조정 사유 (필수)</label>
     <input id="adjReason" type="text" placeholder="예) 실사 차이, 파손 폐기">
     <div id="adjErr" class="merr"></div>
@@ -774,37 +775,48 @@ async function saveMove(){
   }
 }
 
-/* ---------- 완제품 재고 조정 (실사·파손 등) ---------- */
+/* ---------- 완제품 재고 조정 (실사·파손 등) ----------
+   입력값은 증감분이 아니라 "실제로 세어본 수량"(절대값)이다.
+   저장 시 현재 재고와의 차이를 delta로 계산해 logs에는 기존과 동일하게
+   부호 있는 qty(type:'adj')로 남긴다 — removeLog/렌더링/CSV는 변경 불필요. */
 function openAdjModal(){
   const sel=document.getElementById('adjSelect');
   sel.innerHTML=CATS.map(cat=>{
     const items=state.products.filter(p=>categoryOf(p.name)===cat.key);
     if(!items.length) return '';
-    const opts=items.map(p=>`<option value="${p.id}">${esc(p.name)} (재고 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
+    const opts=items.map(p=>`<option value="${p.id}">${esc(p.name)} (현재 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
     return `<optgroup label="${esc(cat.label)}">${opts}</optgroup>`;
   }).join('');
-  document.getElementById('adjQty').value='';
   document.getElementById('adjReason').value='';
   document.getElementById('adjErr').textContent='';
+  onAdjProductChange();
   document.getElementById('adjModal').style.display='flex';
+}
+function onAdjProductChange(){
+  const p=state.products.find(x=>x.id===document.getElementById('adjSelect').value);
+  if(!p) return;
+  const u=unitInfo(p.name);
+  document.getElementById('adjQty').value=p.stock||0;
+  document.getElementById('adjCur').textContent=`현재 시스템 재고: ${p.stock||0}${u.unit}`;
 }
 function closeAdjModal(){ document.getElementById('adjModal').style.display='none'; }
 async function saveAdjModal(){
   const pid=document.getElementById('adjSelect').value;
   const p=state.products.find(x=>x.id===pid);
-  const qRaw=parseFloat(document.getElementById('adjQty').value);
+  const newVal=parseFloat(document.getElementById('adjQty').value);
   const memo=document.getElementById('adjReason').value.trim();
   const err=document.getElementById('adjErr');
   if(!p){ err.textContent='제품을 선택하세요'; return; }
-  if(!qRaw){ err.textContent='0이 아닌 수량을 입력하세요'; return; }
+  if(isNaN(newVal)||newVal<0){ err.textContent='0 이상의 실제 수량을 입력하세요'; return; }
   if(!memo){ err.textContent='조정 사유는 필수입니다'; return; }
-  if((p.stock||0)+qRaw<0 && !confirm('조정 후 재고가 음수가 됩니다. 계속할까요?')) return;
+  const delta = newVal-(p.stock||0);
+  if(delta===0){ err.textContent='현재 재고와 같습니다 — 조정할 필요가 없어요'; return; }
   const btn=document.getElementById('adjSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
   err.textContent='';
   const dLabel=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
-  const entry={ pid, pname:p.name, type:'adj', qty:qRaw, chan:'재고조정', user:state.user, memo, ts:Date.now(), date:dLabel };
+  const entry={ pid, pname:p.name, type:'adj', qty:delta, chan:'재고조정', user:state.user, memo, ts:Date.now(), date:dLabel };
   try{
-    await commitMove(pid, qRaw, entry);
+    await commitMove(pid, delta, entry);
     closeAdjModal();
   }catch(e){
     console.error('재고 조정 저장 실패',e);
