@@ -357,6 +357,8 @@ nav button.sel{color:var(--brand)}
     <input id="matQty" type="number" inputmode="decimal" step="0.1" placeholder="0">
     <label class="f" id="matReasonLabel">메모 (선택)</label>
     <input id="matReason" type="text" placeholder="예) OO축산 매입">
+    <div class="chips" id="matReasonChips" style="display:none"></div>
+    <input id="matReasonOther" type="text" placeholder="사유를 직접 입력하세요" style="display:none;margin-top:8px">
     <div id="matErr" class="merr"></div>
     <div class="mbtns">
       <button class="mcancel" onclick="closeMatModal()">취소</button>
@@ -376,7 +378,8 @@ nav button.sel{color:var(--brand)}
     <input id="adjQty" type="number" inputmode="numeric" placeholder="0">
     <div id="adjCur" class="munit"></div>
     <label class="f">조정 사유 (필수)</label>
-    <input id="adjReason" type="text" placeholder="예) 실사 차이, 파손 폐기">
+    <div class="chips" id="adjReasonChips"></div>
+    <input id="adjReasonOther" type="text" placeholder="사유를 직접 입력하세요" style="display:none;margin-top:8px">
     <div id="adjErr" class="merr"></div>
     <div class="mbtns">
       <button class="mcancel" onclick="closeAdjModal()">취소</button>
@@ -470,6 +473,11 @@ const MAT_ORDER = ['woopi','stick','pack'];
 let state = { products:[], logs:[], materials:[], user:'형' };
 let type='out', chan='네이버스토어';
 let matModalMode='buy';
+const ADJ_REASONS = ['실사 차이','파손/불량 폐기','유통기한 경과','시식/증정','기타'];
+function renderReasonChips(containerId){
+  document.getElementById(containerId).innerHTML = ADJ_REASONS.map(r=>`<button data-r="${r}">${r}</button>`).join('');
+}
+let matReasonSel=null, adjReasonSel=null;
 let FS = null; // firestore handle when online
 
 /* ---------- storage layer ---------- */
@@ -704,6 +712,12 @@ function openMatModal(mode){
   document.getElementById('matSelect').innerHTML = MAT_ORDER.map(id=>`<option value="${id}">${MAT_META[id].name} (${MAT_META[id].unit})</option>`).join('');
   document.getElementById('matQty').value='';
   document.getElementById('matReason').value='';
+  document.getElementById('matReason').style.display = mode==='buy' ? 'block' : 'none';
+  document.getElementById('matReasonChips').style.display = mode==='buy' ? 'none' : 'flex';
+  document.getElementById('matReasonOther').style.display='none';
+  document.getElementById('matReasonOther').value='';
+  matReasonSel=null;
+  if(mode==='adj') renderReasonChips('matReasonChips');
   document.getElementById('matErr').textContent='';
   document.getElementById('matModal').style.display='flex';
 }
@@ -711,11 +725,16 @@ function closeMatModal(){ document.getElementById('matModal').style.display='non
 async function saveMatModal(){
   const id=document.getElementById('matSelect').value;
   const qRaw=parseFloat(document.getElementById('matQty').value);
-  const memo=document.getElementById('matReason').value.trim();
+  let memo;
+  if(matModalMode==='buy'){
+    memo = document.getElementById('matReason').value.trim();
+  }else{
+    memo = matReasonSel==='기타' ? document.getElementById('matReasonOther').value.trim() : (matReasonSel||'');
+  }
   const err=document.getElementById('matErr');
   if(!qRaw){ err.textContent='0이 아닌 수량을 입력하세요'; return; }
   if(matModalMode==='buy' && qRaw<=0){ err.textContent='매입 수량은 0보다 커야 합니다'; return; }
-  if(matModalMode==='adj' && !memo){ err.textContent='조정 사유는 필수입니다'; return; }
+  if(matModalMode==='adj' && !memo){ err.textContent='조정 사유를 선택하세요'; return; }
   const delta = matModalMode==='buy' ? Math.abs(qRaw) : qRaw;
   const btn=document.getElementById('matSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
   err.textContent='';
@@ -799,6 +818,22 @@ function stepQty(d){ const i=document.getElementById('mQty'); i.value=Math.max(1
 document.getElementById('mChan').onclick=e=>{ if(e.target.dataset.c){ chan=e.target.dataset.c; document.querySelectorAll('#mChan button').forEach(b=>b.classList.toggle('sel',b.dataset.c===chan)); } };
 document.getElementById('mQty').oninput=updatePreview;
 document.getElementById('mProd').onchange=updatePreview;
+document.getElementById('adjReasonChips').onclick=e=>{
+  if(!e.target.dataset.r) return;
+  adjReasonSel=e.target.dataset.r;
+  document.querySelectorAll('#adjReasonChips button').forEach(b=>b.classList.toggle('sel',b.dataset.r===adjReasonSel));
+  const other=document.getElementById('adjReasonOther');
+  other.style.display = adjReasonSel==='기타' ? 'block':'none';
+  if(adjReasonSel==='기타') other.focus();
+};
+document.getElementById('matReasonChips').onclick=e=>{
+  if(!e.target.dataset.r) return;
+  matReasonSel=e.target.dataset.r;
+  document.querySelectorAll('#matReasonChips button').forEach(b=>b.classList.toggle('sel',b.dataset.r===matReasonSel));
+  const other=document.getElementById('matReasonOther');
+  other.style.display = matReasonSel==='기타' ? 'block':'none';
+  if(matReasonSel==='기타') other.focus();
+};
 
 function updatePreview(){
   const p=state.products.find(x=>x.id===document.getElementById('mProd').value);
@@ -847,7 +882,10 @@ function openAdjModal(){
     const opts=items.map(p=>`<option value="${p.id}">${esc(p.name)} (현재 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
     return `<optgroup label="${esc(cat.label)}">${opts}</optgroup>`;
   }).join('');
-  document.getElementById('adjReason').value='';
+  renderReasonChips('adjReasonChips');
+  adjReasonSel=null;
+  document.getElementById('adjReasonOther').style.display='none';
+  document.getElementById('adjReasonOther').value='';
   document.getElementById('adjErr').textContent='';
   onAdjProductChange();
   document.getElementById('adjModal').style.display='flex';
@@ -864,11 +902,11 @@ async function saveAdjModal(){
   const pid=document.getElementById('adjSelect').value;
   const p=state.products.find(x=>x.id===pid);
   const newVal=parseFloat(document.getElementById('adjQty').value);
-  const memo=document.getElementById('adjReason').value.trim();
+  const memo = adjReasonSel==='기타' ? document.getElementById('adjReasonOther').value.trim() : (adjReasonSel||'');
   const err=document.getElementById('adjErr');
   if(!p){ err.textContent='제품을 선택하세요'; return; }
   if(isNaN(newVal)||newVal<0){ err.textContent='0 이상의 실제 수량을 입력하세요'; return; }
-  if(!memo){ err.textContent='조정 사유는 필수입니다'; return; }
+  if(!memo){ err.textContent='조정 사유를 선택하세요'; return; }
   const delta = newVal-(p.stock||0);
   if(delta===0){ err.textContent='현재 재고와 같습니다 — 조정할 필요가 없어요'; return; }
   const btn=document.getElementById('adjSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
