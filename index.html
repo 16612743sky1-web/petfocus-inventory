@@ -176,6 +176,9 @@ input:focus,select:focus{outline:none;border-color:var(--brand-l)}
 .mbtns button{flex:1;padding:15px;border-radius:13px;font-size:16px;font-weight:800;cursor:pointer;font-family:inherit;border:1.5px solid var(--line)}
 .mcancel{background:var(--paper);color:var(--sub)}
 .mcancel:active{background:var(--bg)}
+.mdelete{width:100%;margin-top:12px;padding:14px;border-radius:13px;border:1.5px solid #e2ad9b;background:var(--outbg);color:var(--out);font-weight:800;font-size:14.5px;cursor:pointer;font-family:inherit}
+.mdelete:active{background:#f3d9cd}
+.mdelete:disabled{opacity:.5}
 .msave{background:var(--brand);color:#fff;border-color:var(--brand)}
 .msave:active{background:var(--brand-d)}
 .msave:disabled{opacity:.5}
@@ -327,12 +330,14 @@ nav button.sel{color:var(--brand)}
 
 </div>
 
-<!-- 적정재고 수정 모달 -->
+<!-- 제품 관리 모달 (이름 수정 / 적정재고 수정 / 삭제) -->
 <div id="minModal" class="modal-bg" style="display:none" onclick="if(event.target===this)closeMinModal()">
   <div class="modal">
-    <div class="mtitle" id="minTitle">적정재고 수정</div>
-    <div class="mdesc">이 수량 <b>이하</b>로 떨어지면 '보충 필요'로 알려드립니다.<br>알림에서 빼려면 <b>0</b>으로 두세요.</div>
-    <div class="qty" style="margin-top:16px">
+    <div class="mtitle">제품 관리</div>
+    <label class="f">제품명</label>
+    <input id="minNameInput" type="text">
+    <label class="f">적정재고 <span style="font-weight:500;color:var(--sub2)">(이 수량 이하면 '보충 필요' 알림, 0이면 알림 안 함)</span></label>
+    <div class="qty" style="margin-top:0">
       <button class="qbtn" onclick="minStep(-1)">−</button>
       <input id="minInput" type="number" inputmode="numeric" min="0" value="20">
       <button class="qbtn" onclick="minStep(1)">＋</button>
@@ -343,6 +348,7 @@ nav button.sel{color:var(--brand)}
       <button class="mcancel" onclick="closeMinModal()">취소</button>
       <button class="msave" id="minSaveBtn" onclick="saveMinModal()">저장</button>
     </div>
+    <button class="mdelete" id="minDeleteBtn" onclick="deleteProductFromModal()">🗑 이 제품 완전히 삭제</button>
   </div>
 </div>
 
@@ -548,16 +554,20 @@ function setSync(on){
 }
 
 /* ---------- actions ---------- */
-async function setMin(prodId, val){
-  if(FS){ await FS.updateDoc(FS.doc(FS.db,'products',prodId), {min:val}); }
-  else { const p=state.products.find(x=>x.id===prodId); if(p) p.min=val; saveLocal(); render(); }
+async function updateProduct(prodId, patch){
+  if(FS){ await FS.updateDoc(FS.doc(FS.db,'products',prodId), patch); }
+  else { const p=state.products.find(x=>x.id===prodId); if(p) Object.assign(p,patch); saveLocal(); render(); }
+}
+async function deleteProductDoc(prodId){
+  if(FS){ await FS.deleteDoc(FS.doc(FS.db,'products',prodId)); }
+  else { state.products=state.products.filter(x=>x.id!==prodId); saveLocal(); render(); }
 }
 let minEditId=null;
 function editMin(id){
   const p=state.products.find(x=>x.id===id); if(!p) return;
   const u=unitInfo(p.name);
   minEditId=id;
-  document.getElementById('minTitle').textContent=p.name;
+  document.getElementById('minNameInput').value=p.name;
   document.getElementById('minUnit').textContent='단위: '+u.unit+' · 현재 재고 '+(p.stock||0);
   document.getElementById('minInput').value=(p.min!=null)?p.min:LOW;
   document.getElementById('minErr').textContent='';
@@ -567,18 +577,40 @@ function minStep(d){ const i=document.getElementById('minInput'); i.value=Math.m
 function closeMinModal(){ document.getElementById('minModal').style.display='none'; minEditId=null; }
 async function saveMinModal(){
   if(minEditId==null) return;
+  const name=document.getElementById('minNameInput').value.trim();
   const n=parseInt(document.getElementById('minInput').value);
-  if(isNaN(n)||n<0){ document.getElementById('minErr').textContent='0 이상의 숫자를 입력하세요'; return; }
+  const err=document.getElementById('minErr');
+  if(!name){ err.textContent='제품명을 입력하세요'; return; }
+  if(state.products.some(p=>p.id!==minEditId && p.name===name)){ err.textContent='이미 같은 이름의 제품이 있습니다'; return; }
+  if(isNaN(n)||n<0){ err.textContent='0 이상의 숫자를 입력하세요'; return; }
   const btn=document.getElementById('minSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
-  document.getElementById('minErr').textContent='';
+  err.textContent='';
   try{
-    await setMin(minEditId, n);
+    await updateProduct(minEditId, {name, min:n});
     closeMinModal();
   }catch(e){
-    console.error('적정재고 저장 실패',e);
-    document.getElementById('minErr').textContent='저장 실패 — 네트워크·권한을 확인하세요';
+    console.error('제품 저장 실패',e);
+    err.textContent='저장 실패 — 네트워크·권한을 확인하세요';
   }finally{
     btn.disabled=false; btn.textContent='저장';
+  }
+}
+async function deleteProductFromModal(){
+  if(minEditId==null) return;
+  const p=state.products.find(x=>x.id===minEditId); if(!p) return;
+  const err=document.getElementById('minErr');
+  if((p.stock||0)!==0){ err.textContent='재고가 0이 아닙니다 — 먼저 재고 조정으로 0을 만든 뒤 삭제하세요'; return; }
+  if(!confirm(`'${p.name}'을(를) 목록에서 완전히 삭제할까요?\n이 제품의 기존 입출고 이력은 그대로 남습니다.`)) return;
+  const btn=document.getElementById('minDeleteBtn'); btn.disabled=true; btn.textContent='삭제 중…';
+  err.textContent='';
+  try{
+    await deleteProductDoc(minEditId);
+    closeMinModal();
+  }catch(e){
+    console.error('제품 삭제 실패',e);
+    err.textContent='삭제 실패 — 네트워크·권한을 확인하세요';
+  }finally{
+    btn.disabled=false; btn.textContent='🗑 이 제품 완전히 삭제';
   }
 }
 
@@ -956,7 +988,7 @@ function render(){
       const d=document.createElement('div'); d.className='card pcard'+cls; d.style.animationDelay=(animI++*.03)+'s';
       const boxLine = u.per ? `<div class="pm">1box = ${u.per}ea · 총 ${(stk*u.per).toLocaleString()}ea</div>` : '';
       const badge = isOut?'<span class="badge-out">품절</span>':(isLow?'<span class="badge-low">재고 부족</span>':'');
-      const minLine = `<div class="pm minrow">적정 ${min}${u.unit}<button class="minedit" onclick="event.stopPropagation();editMin('${p.id}')">수정</button>${badge}</div>`;
+      const minLine = `<div class="pm minrow">적정 ${min}${u.unit}<button class="minedit" onclick="event.stopPropagation();editMin('${p.id}')">관리</button>${badge}</div>`;
       d.innerHTML=`<div class="pinfo"><div class="pn">${esc(p.name)}</div>${boxLine}${minLine}</div>
         <div class="stk"><b>${stk}</b><small>${u.unit}</small></div>`;
       d.onclick=()=>{ document.getElementById('mProd').value=p.id; go('move'); updatePreview(); };
