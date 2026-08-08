@@ -834,19 +834,39 @@ async function commitMove(prodId, delta, entry){
 async function removeLog(log){
   if(!confirm('이 기록을 삭제하고 재고를 되돌릴까요?')) return;
   if(log.kind==='material'){
+    const matExists = state.materials.some(x=>x.id===log.matId);
     if(FS){
       try{
-        const batch = FS.writeBatch(FS.db);
-        batch.update(FS.doc(FS.db,'materials',log.matId), {stock: FS.increment(-log.qty)});
-        batch.delete(FS.doc(FS.db,'logs',log.id));
-        await batch.commit();
+        if(matExists && log.unitPrice>0){
+          // 단가 있는 매입 취소: 재고와 함께 가중평균단가도 역산으로 되돌린다 (commitMatBuy와 같은 이유로 트랜잭션)
+          await FS.runTransaction(FS.db, async (tx)=>{
+            const ref=FS.doc(FS.db,'materials',log.matId);
+            const snap=await tx.get(ref);
+            const cur=snap.data()||{};
+            const curStock=cur.stock||0, curAvg=cur.avgCost||0;
+            const newStock=curStock-log.qty;
+            const newAvg = newStock>0 ? Math.max(0,(curAvg*curStock-(log.totalCost||0))/newStock) : 0;
+            tx.update(ref, {stock:newStock, avgCost:newAvg});
+            tx.delete(FS.doc(FS.db,'logs',log.id));
+          });
+        }else{
+          const batch = FS.writeBatch(FS.db);
+          if(matExists) batch.update(FS.doc(FS.db,'materials',log.matId), {stock: FS.increment(-log.qty)});
+          batch.delete(FS.doc(FS.db,'logs',log.id));
+          await batch.commit();
+        }
       }catch(e){
         console.error('삭제 실패',e);
         alert('삭제에 실패했습니다.\n네트워크 상태나 Firebase 권한을 확인해 주세요.');
       }
     }else{
       const m=state.materials.find(x=>x.id===log.matId);
-      if(m) m.stock=(m.stock||0)-log.qty;
+      if(m){
+        const curStock=m.stock||0, curAvg=m.avgCost||0;
+        const newStock=curStock-log.qty;
+        if(log.unitPrice>0) m.avgCost = newStock>0 ? Math.max(0,(curAvg*curStock-(log.totalCost||0))/newStock) : 0;
+        m.stock=newStock;
+      }
       state.logs=state.logs.filter(l=>l.id!==log.id);
       saveLocal(); render();
     }
@@ -906,29 +926,26 @@ async function commitMatMove(id, delta, entry){
    (두 사람이 동시에 같은 원재료를 매입해도 손실 갱신 없음). 단가 없이 수량만 매입하면
    기존처럼 increment 배치만 쓴다. */
 async function commitMatBuy(id, qty, unitPrice, entry){
-  const totalCost = unitPrice>0 ? qty*unitPrice : 0;
-  if(unitPrice>0){ entry.unitPrice = unitPrice; entry.totalCost = totalCost; }
+  if(!(unitPrice>0)) return commitMatMove(id, qty, entry); // 단가 없으면 기존 경로 그대로
+  const totalCost = qty*unitPrice;
+  entry.unitPrice = unitPrice; entry.totalCost = totalCost;
   if(FS){
-    if(unitPrice>0){
-      await FS.runTransaction(FS.db, async (tx)=>{
-        const ref = FS.doc(FS.db,'materials',id);
-        const snap = await tx.get(ref);
-        const cur = snap.data()||{};
-        const curStock = cur.stock||0, curAvg = cur.avgCost||0;
-        const newStock = curStock+qty;
-        const newAvg = newStock>0 ? (curAvg*curStock+totalCost)/newStock : 0;
-        tx.update(ref, {stock:newStock, avgCost:newAvg});
-        tx.set(FS.doc(FS.collection(FS.db,'logs')), entry);
-      });
-    }else{
-      await commitMatMove(id, qty, entry);
-    }
+    await FS.runTransaction(FS.db, async (tx)=>{
+      const ref = FS.doc(FS.db,'materials',id);
+      const snap = await tx.get(ref);
+      const cur = snap.data()||{};
+      const curStock = cur.stock||0, curAvg = cur.avgCost||0;
+      const newStock = curStock+qty;
+      const newAvg = newStock>0 ? (curAvg*curStock+totalCost)/newStock : 0;
+      tx.update(ref, {stock:newStock, avgCost:newAvg});
+      tx.set(FS.doc(FS.collection(FS.db,'logs')), entry);
+    });
   }else{
     const m=state.materials.find(x=>x.id===id);
     if(m){
       const curStock=m.stock||0, curAvg=m.avgCost||0;
       const newStock=curStock+qty;
-      if(unitPrice>0) m.avgCost = newStock>0 ? (curAvg*curStock+totalCost)/newStock : 0;
+      m.avgCost = newStock>0 ? (curAvg*curStock+totalCost)/newStock : 0;
       m.stock = newStock;
     }
     state.logs.unshift({id:'l'+Date.now(), ...entry});
@@ -1285,17 +1302,31 @@ function render(){
       </div>`;
     }).join('');
   }
-  // 단가표 원재료 행 — 원재료 종류나 평균단가가 바뀔 때만 다시 그려서, 입력 중인 값이 무관한
-  // 재고 갱신(다른 재료 매입 등)에 지워지지 않게 함. 평균단가는 매입 시마다 바뀌므로 키에 포함.
+  // 단가표 원재료 행 — 원재료 종류가 바뀔 때만 전체를 다시 그린다(입력 중 값 보존 원칙).
+  // 평균단가(avgCost)가 갱신됐을 때는 전체 재렌더 대신, 사용자가 손대지 않은(기본값 그대로인)
+  // 칸만 새 평균단가로 바꾼다 — data-def에 "마지막으로 넣어준 기본값"을 기억해 비교.
+  const matDefPrice = m => m.avgCost>0 ? Math.round(m.avgCost) : (MAT_LEGACY_META[m.id] ? MAT_LEGACY_META[m.id].price : 0);
   const priceRows=document.getElementById('priceMatRows');
   if(priceRows){
-    const key = mats.map(m=>m.id+':'+m.name+':'+m.unit+':'+(m.avgCost||0)).join('|');
+    const key = mats.map(m=>m.id+':'+m.name+':'+m.unit).join('|');
     if(key!==lastPriceMatKey){
       lastPriceMatKey=key;
       priceRows.innerHTML = mats.map(m=>{
-        const def = m.avgCost>0 ? Math.round(m.avgCost) : (MAT_LEGACY_META[m.id] ? MAT_LEGACY_META[m.id].price : 0);
-        return `<tr><td>${esc(m.name)} /${esc(m.unit)}</td><td><input type="number" class="p-mat-input" data-mat="${m.id}" value="${def}" oninput="calcCost()"></td></tr>`;
+        const def = matDefPrice(m);
+        return `<tr><td>${esc(m.name)} /${esc(m.unit)}</td><td><input type="number" class="p-mat-input" data-mat="${m.id}" data-def="${def}" value="${def}" oninput="calcCost()"></td></tr>`;
       }).join('');
+    }else{
+      let priceChanged=false;
+      mats.forEach(m=>{
+        const inp=priceRows.querySelector(`.p-mat-input[data-mat="${m.id}"]`);
+        if(!inp) return;
+        const def=String(matDefPrice(m));
+        if(inp.dataset.def!==def){
+          if(inp.value===inp.dataset.def){ inp.value=def; priceChanged=true; }
+          inp.dataset.def=def;
+        }
+      });
+      if(priceChanged) calcCost();
     }
   }
   // 생산배치 투입량 행 — 마찬가지로 원재료 종류가 바뀔 때만 다시 그림
@@ -1360,7 +1391,8 @@ function calcCost(){
   const woopiInp=document.querySelector('.b-mat-input[data-mat="woopi"]');
   const inkg = woopiInp?(parseFloat(woopiInp.value)||0):0, outkg = num('b_outkg');
   const yieldPct = (inkg>0 && outkg>0) ? (outkg/inkg*100) : null;
-  const pcsPerKg = (inkg>0 && out>0) ? (out/inkg) : null;
+  // out은 나눗셈용으로 1로 보정된 값이므로, 실제 산출 수량이 입력됐을 때만 개수/kg를 보여준다
+  const pcsPerKg = (inkg>0 && num('b_out')>0) ? (num('b_out')/inkg) : null;
   const mp = price-per, mr = price>0?mp/price*100:0;
   const w=n=>Math.round(n).toLocaleString();
   document.getElementById('costRes').innerHTML=`
@@ -1370,8 +1402,8 @@ function calcCost(){
     <div class="r"><span>배치 총 제조원가</span><b>${w(tot)}원</b></div>
     <div class="r big"><span>개당 원가</span><b>${w(per)}원</b></div>
     ${pcsPerKg!=null?`<div class="r"><span>원물(우피) 1kg당 생산 개수</span><b>${pcsPerKg.toFixed(1)}개</b></div>`:''}
-    ${yieldPct!=null?`<div class="r"><span>수율 (완성kg÷투입kg)</span><b>${yieldPct.toFixed(1)}%</b></div>
-    <div class="r"><span>로스율</span><b>${(100-yieldPct).toFixed(1)}%</b></div>`:''}
+    ${yieldPct!=null?`<div class="r"><span>수율 (완성kg÷투입kg)</span><b>${yieldPct.toFixed(1)}%${yieldPct>100?' ⚠️ 완성중량이 투입량보다 큽니다':''}</b></div>
+    <div class="r"><span>로스율</span><b>${Math.max(0,100-yieldPct).toFixed(1)}%</b></div>`:''}
     ${price>0?`<div class="r"><span>개당 한계이익</span><b class="${mp>=0?'pos':'neg'}">${w(mp)}원</b></div>
     <div class="r"><span>마진율</span><b class="${mp>=0?'pos':'neg'}">${mr.toFixed(1)}%</b></div>`:'<div class="r"><span style="color:var(--sub)">판매공급가 입력 시 마진 계산</span><b></b></div>'}`;
 }
