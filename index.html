@@ -361,9 +361,15 @@ nav button.sel{color:var(--brand)}
     <select id="matSelect"></select>
     <label class="f" id="matQtyLabel">매입 수량</label>
     <input id="matQty" type="number" inputmode="decimal" step="0.1" placeholder="0">
-    <div id="matPriceWrap">
+    <div id="matBuyWrap">
       <label class="f">단가 (원, 선택 — 입력하면 평균단가가 자동으로 갱신됩니다)</label>
       <input id="matPrice" type="number" inputmode="decimal" placeholder="예) 15000">
+      <label class="f">입고일</label>
+      <div class="datebar">
+        <button type="button" class="dq" onclick="setMatDate(0)">오늘</button>
+        <button type="button" class="dq" onclick="setMatDate(-1)">어제</button>
+        <input id="matDate" type="date">
+      </div>
     </div>
     <label class="f" id="matReasonLabel">메모 (선택)</label>
     <input id="matReason" type="text" placeholder="예) OO축산 매입">
@@ -963,7 +969,8 @@ function openMatModal(mode){
   document.getElementById('matSelect').innerHTML = sortedMaterials().map(m=>`<option value="${m.id}">${esc(m.name)} (${esc(m.unit)})</option>`).join('');
   document.getElementById('matQty').value='';
   document.getElementById('matPrice').value='';
-  document.getElementById('matPriceWrap').style.display = mode==='buy' ? 'block' : 'none';
+  document.getElementById('matDate').value=todayISO();   // 입고일 기본값 = 오늘
+  document.getElementById('matBuyWrap').style.display = mode==='buy' ? 'block' : 'none';
   document.getElementById('matReason').value='';
   document.getElementById('matReason').style.display = mode==='buy' ? 'block' : 'none';
   document.getElementById('matReasonChips').style.display = mode==='buy' ? 'none' : 'flex';
@@ -992,7 +999,9 @@ async function saveMatModal(){
   const delta = matModalMode==='buy' ? Math.abs(qRaw) : qRaw;
   const btn=document.getElementById('matSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
   err.textContent='';
-  const dLabel=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  // 매입은 입고일을 직접 고를 수 있고(기본 오늘), 조정은 오늘 날짜로 남긴다 — saveMove와 같은 방식
+  const dv = matModalMode==='buy' ? document.getElementById('matDate').value : '';
+  const dLabel = dateLabel(dv);
   const matObj=state.materials.find(x=>x.id===id);
   const entry={ kind:'material', matId:id, matName:matObj?matObj.name:id, mkind:matModalMode,
     qty:delta, user:state.user, memo, ts:Date.now(), date:dLabel };
@@ -1065,7 +1074,7 @@ async function saveBatch(){
   const pcsPerKg = (woopiUsed>0) ? +(out/woopiUsed).toFixed(1) : null;
 
   const btn=document.getElementById('batchSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
-  const dLabel=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  const dLabel=dateLabel();
   const memo=document.getElementById('b_memo').value.trim();
   const entry={ pid:prodId, pname:p.name, type:'in', qty:out, chan:'생산입고', user:state.user,
     memo, ts:Date.now(), date:dLabel,
@@ -1125,7 +1134,7 @@ async function saveMove(){
   if(type==='out' && (p.stock||0)<q && !confirm('재고보다 많은 출고입니다. 계속할까요?')) return;
   const btn=document.getElementById('saveBtn'); btn.disabled=true; btn.textContent='저장 중…';
   const dv=document.getElementById('mDate').value;
-  const dLabel = dv ? dv.slice(5).replace('-','.') : new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  const dLabel = dateLabel(dv);
   const entry={ pid, pname:p.name, type, qty:q,
     chan: type==='out'?chan:'생산입고', user:state.user,
     memo:document.getElementById('mMemo').value.trim(),
@@ -1184,7 +1193,7 @@ async function saveAdjModal(){
   if(delta===0){ err.textContent='현재 재고와 같습니다 — 조정할 필요가 없어요'; return; }
   const btn=document.getElementById('adjSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
   err.textContent='';
-  const dLabel=new Date().toLocaleDateString('ko-KR',{month:'2-digit',day:'2-digit'});
+  const dLabel=dateLabel();
   const entry={ pid, pname:p.name, type:'adj', qty:delta, chan:'재고조정', user:state.user, memo, ts:Date.now(), date:dLabel };
   try{
     await commitMove(pid, delta, entry);
@@ -1428,8 +1437,12 @@ function go(t){
 }
 
 /* ---------- boot ---------- */
-function todayISO(){ const d=new Date(); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
-function setDate(off){ const d=new Date(); d.setDate(d.getDate()+off); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); document.getElementById('mDate').value=d.toISOString().slice(0,10); }
+function isoDate(off){ const d=new Date(); d.setDate(d.getDate()+(off||0)); d.setMinutes(d.getMinutes()-d.getTimezoneOffset()); return d.toISOString().slice(0,10); }
+function todayISO(){ return isoDate(0); }
+/* 이력에 남기는 날짜 표시(MM.DD) — 모든 기록이 같은 형식을 쓰도록 이 함수만 거친다 */
+function dateLabel(iso){ return (iso||todayISO()).slice(5).replace('-','.'); }
+function setDate(off){ document.getElementById('mDate').value=isoDate(off); }
+function setMatDate(off){ document.getElementById('matDate').value=isoDate(off); }
 document.getElementById('today').textContent=new Date().toLocaleDateString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'})+' 기준';
 document.getElementById('mDate').value=todayISO();
 setType('out'); calcCost(); initStore();
