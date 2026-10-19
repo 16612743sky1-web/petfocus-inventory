@@ -181,6 +181,13 @@ input:focus,select:focus{outline:none;border-color:var(--brand-l)}
 .mdelete:active{background:#f3d9cd}
 .mdelete:disabled{opacity:.5}
 .msave{background:var(--brand);color:#fff;border-color:var(--brand)}
+/* 조정 방식 토글 (± 증감 / = 직접 입력) — setType이 .seg를 전역 선택하므로 별도 클래스 사용 */
+.mseg{display:flex;gap:4px;background:var(--bg);border:1px solid var(--line);border-radius:12px;padding:4px;margin-top:14px}
+.mseg button{flex:1;padding:11px 6px;border:none;background:none;border-radius:9px;font-weight:800;font-size:14px;color:var(--sub);cursor:pointer;font-family:inherit}
+.mseg button.sel{background:var(--paper);color:var(--brand);box-shadow:0 1px 4px rgba(40,25,15,.15)}
+.mpreview{text-align:center;font-size:13.5px;margin-top:10px;font-weight:800;color:var(--ink);min-height:18px}
+.chk{display:flex;align-items:center;gap:8px;font-size:14px;font-weight:700;margin-top:14px;color:var(--ink)}
+.chk input{width:20px;height:20px}
 .msave:active{background:var(--brand-d)}
 .msave:disabled{opacity:.5}
 
@@ -228,6 +235,9 @@ nav button.sel{color:var(--brand)}
   <div class="rowtools">
     <button onclick="openAddProdModal()">＋ 제품 추가</button>
     <button onclick="openAdjModal()">🔧 재고 조정 (실사·파손)</button>
+  </div>
+  <div class="rowtools">
+    <button onclick="openResetModal()">🔄 실사 시작 — 전체 재고 0으로</button>
   </div>
   <h2 class="sec">품목별 현재재고</h2>
   <div id="stockList"></div>
@@ -358,9 +368,14 @@ nav button.sel{color:var(--brand)}
     <div class="mtitle" id="matTitle">원재료 매입</div>
     <div class="mdesc" id="matDesc"></div>
     <label class="f">원재료</label>
-    <select id="matSelect"></select>
+    <select id="matSelect" onchange="onMatSelectChange()"></select>
+    <div class="mseg" id="matModeSeg" style="display:none">
+      <button type="button" data-m="delta" onclick="setMatAdjMode('delta')">± 증감</button>
+      <button type="button" data-m="set" class="sel" onclick="setMatAdjMode('set')">= 직접 입력</button>
+    </div>
     <label class="f" id="matQtyLabel">매입 수량</label>
-    <input id="matQty" type="number" inputmode="decimal" step="0.1" placeholder="0">
+    <input id="matQty" type="number" inputmode="decimal" step="0.1" placeholder="0" oninput="updateMatPreview()">
+    <div id="matPreview" class="mpreview"></div>
     <div id="matBuyWrap">
       <label class="f">단가 (원, 선택 — 입력하면 평균단가가 자동으로 갱신됩니다)</label>
       <input id="matPrice" type="number" inputmode="decimal" placeholder="예) 15000">
@@ -428,12 +443,17 @@ nav button.sel{color:var(--brand)}
 <div id="adjModal" class="modal-bg" style="display:none" onclick="if(event.target===this)closeAdjModal()">
   <div class="modal">
     <div class="mtitle">재고 조정</div>
-    <div class="mdesc">실사 차이·파손·폐기 등으로 재고가 달라졌을 때, <b>실제로 세어본 수량</b>을 그대로 입력하세요. 차이는 자동으로 계산됩니다.</div>
+    <div class="mdesc"><b>= 직접 입력</b>은 실제로 세어본 수량을 그대로, <b>± 증감</b>은 늘어나거나 줄어든 만큼만 입력하세요. 차이는 자동으로 계산됩니다.</div>
     <label class="f">제품</label>
     <select id="adjSelect" onchange="onAdjProductChange()"></select>
-    <label class="f">실제 재고 수량</label>
-    <input id="adjQty" type="number" inputmode="numeric" placeholder="0">
+    <div class="mseg" id="adjModeSeg">
+      <button type="button" data-m="delta" onclick="setAdjMode('delta')">± 증감</button>
+      <button type="button" data-m="set" class="sel" onclick="setAdjMode('set')">= 직접 입력</button>
+    </div>
+    <label class="f" id="adjQtyLabel">설정 수량 (현재고를 이 값으로 변경)</label>
+    <input id="adjQty" type="number" inputmode="numeric" placeholder="0" oninput="updateAdjPreview()">
     <div id="adjCur" class="munit"></div>
+    <div id="adjPreview" class="mpreview"></div>
     <label class="f">조정 사유 (필수)</label>
     <div class="chips" id="adjReasonChips"></div>
     <input id="adjReasonOther" type="text" placeholder="사유를 직접 입력하세요" style="display:none;margin-top:8px">
@@ -441,6 +461,23 @@ nav button.sel{color:var(--brand)}
     <div class="mbtns">
       <button class="mcancel" onclick="closeAdjModal()">취소</button>
       <button class="msave" id="adjSaveBtn" onclick="saveAdjModal()">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- 실사 시작 (전체 재고 0) 모달 -->
+<div id="resetModal" class="modal-bg" style="display:none" onclick="if(event.target===this)closeResetModal()">
+  <div class="modal">
+    <div class="mtitle">실사 시작 — 전체 재고 0으로</div>
+    <div class="mdesc">모든 완제품 재고를 <b>0</b>으로 맞춥니다. 실행 전에 지금까지의 입출고 이력이 <b>엑셀(CSV)로 자동 저장</b>되고, 이력은 지워지지 않습니다. 이후 실사한 수량은 <b>재고 조정 → = 직접 입력</b>으로 넣으세요.</div>
+    <label class="chk"><input type="checkbox" id="resetMat" checked> 원재료 재고도 0으로</label>
+    <div id="resetSummary" class="munit"></div>
+    <label class="f">확인을 위해 <b>초기화</b> 라고 입력하세요</label>
+    <input id="resetConfirm" type="text" placeholder="초기화" autocomplete="off">
+    <div id="resetErr" class="merr"></div>
+    <div class="mbtns">
+      <button class="mcancel" onclick="closeResetModal()">취소</button>
+      <button class="msave" id="resetSaveBtn" onclick="runReset()">0으로 초기화</button>
     </div>
   </div>
 </div>
@@ -963,8 +1000,8 @@ function openMatModal(mode){
   document.getElementById('matTitle').textContent = mode==='buy' ? '원재료 매입' : '원재료 조정';
   document.getElementById('matDesc').textContent = mode==='buy'
     ? '입고된 원재료 수량을 재고에 더합니다.'
-    : '폐기·시식 증정·실사 차이 등 재고 증감을 기록합니다. 감소는 음수로 입력하세요.';
-  document.getElementById('matQtyLabel').textContent = mode==='buy' ? '매입 수량' : '증감 수량 (감소는 음수)';
+    : '폐기·시식 증정·실사 차이 등을 기록합니다. = 직접 입력은 세어본 수량 그대로, ± 증감은 감소를 음수로 입력하세요.';
+  document.getElementById('matModeSeg').style.display = mode==='adj' ? 'flex' : 'none';
   document.getElementById('matReasonLabel').textContent = mode==='buy' ? '메모 (선택)' : '조정 사유 (필수)';
   document.getElementById('matSelect').innerHTML = sortedMaterials().map(m=>`<option value="${m.id}">${esc(m.name)} (${esc(m.unit)})</option>`).join('');
   document.getElementById('matQty').value='';
@@ -979,9 +1016,40 @@ function openMatModal(mode){
   matReasonSel=null;
   if(mode==='adj') renderReasonChips('matReasonChips');
   document.getElementById('matErr').textContent='';
+  setMatAdjMode('set');
   document.getElementById('matModal').style.display='flex';
 }
 function closeMatModal(){ document.getElementById('matModal').style.display='none'; }
+/* 원재료 조정 방식: 'set'(현재고를 입력값으로) | 'delta'(입력값만큼 증감). 매입 모드에선 쓰지 않음 */
+let matAdjMode='set';
+function setMatAdjMode(m){
+  matAdjMode=m;
+  document.querySelectorAll('#matModeSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.m===m));
+  if(matModalMode!=='adj'){
+    document.getElementById('matQtyLabel').textContent='매입 수량';
+    document.getElementById('matQty').value='';
+  }else if(m==='set'){
+    document.getElementById('matQtyLabel').textContent='설정 수량 (현재고를 이 값으로 변경)';
+    document.getElementById('matQty').value=matStock(document.getElementById('matSelect').value);
+  }else{
+    document.getElementById('matQtyLabel').textContent='증감 수량 (감소는 음수)';
+    document.getElementById('matQty').value='';
+  }
+  updateMatPreview();
+}
+function onMatSelectChange(){ if(matModalMode==='adj') setMatAdjMode(matAdjMode); }
+function updateMatPreview(){
+  const el=document.getElementById('matPreview');
+  if(matModalMode!=='adj'){ el.textContent=''; return; }
+  const id=document.getElementById('matSelect').value;
+  const m=state.materials.find(x=>x.id===id); if(!m){ el.textContent=''; return; }
+  const cur=m.stock||0, v=parseFloat(document.getElementById('matQty').value);
+  if(isNaN(v)){ el.textContent=`현재고 ${fmtN(cur)}${m.unit||''}`; return; }
+  const after = matAdjMode==='set' ? v : cur+v;
+  const d = after-cur;
+  el.textContent=`현재고 ${fmtN(cur)} → ${fmtN(after)}${m.unit||''} (${d>=0?'+':''}${fmtN(d)})`;
+}
+function fmtN(n){ return Math.round(n*1000)/1000; }
 async function saveMatModal(){
   const id=document.getElementById('matSelect').value;
   const qRaw=parseFloat(document.getElementById('matQty').value);
@@ -993,10 +1061,15 @@ async function saveMatModal(){
     memo = matReasonSel==='기타' ? document.getElementById('matReasonOther').value.trim() : (matReasonSel||'');
   }
   const err=document.getElementById('matErr');
-  if(!qRaw){ err.textContent='0이 아닌 수량을 입력하세요'; return; }
+  const isSet = matModalMode==='adj' && matAdjMode==='set';
+  if(isSet){
+    if(isNaN(qRaw)||qRaw<0){ err.textContent='0 이상의 실제 수량을 입력하세요'; return; }
+  }else if(!qRaw){ err.textContent='0이 아닌 수량을 입력하세요'; return; }
   if(matModalMode==='buy' && qRaw<=0){ err.textContent='매입 수량은 0보다 커야 합니다'; return; }
   if(matModalMode==='adj' && !memo){ err.textContent='조정 사유를 선택하세요'; return; }
-  const delta = matModalMode==='buy' ? Math.abs(qRaw) : qRaw;
+  // 직접 입력은 현재고와의 차이를 delta로 바꿔 increment로 반영(HARD RULE 4)
+  const delta = matModalMode==='buy' ? Math.abs(qRaw) : (isSet ? fmtN(qRaw-matStock(id)) : qRaw);
+  if(isSet && delta===0){ err.textContent='현재 재고와 같습니다 — 조정할 필요가 없어요'; return; }
   const btn=document.getElementById('matSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
   err.textContent='';
   // 매입은 입고일을 직접 고를 수 있고(기본 오늘), 조정은 오늘 날짜로 남긴다 — saveMove와 같은 방식
@@ -1169,25 +1242,43 @@ function openAdjModal(){
   document.getElementById('adjReasonOther').style.display='none';
   document.getElementById('adjReasonOther').value='';
   document.getElementById('adjErr').textContent='';
+  adjMode='set';
   onAdjProductChange();
   document.getElementById('adjModal').style.display='flex';
+}
+/* 완제품 조정 방식: 'set'(현재고를 입력값으로, 기본) | 'delta'(입력값만큼 증감) */
+let adjMode='set';
+function setAdjMode(m){ adjMode=m; onAdjProductChange(); }
+function updateAdjPreview(){
+  const el=document.getElementById('adjPreview');
+  const p=state.products.find(x=>x.id===document.getElementById('adjSelect').value);
+  if(!p){ el.textContent=''; return; }
+  const u=unitInfo(p.name), cur=p.stock||0, v=parseFloat(document.getElementById('adjQty').value);
+  if(isNaN(v)){ el.textContent=''; return; }
+  const after = adjMode==='set' ? v : cur+v, d=after-cur;
+  el.textContent=`${cur} → ${after}${u.unit} (${d>=0?'+':''}${d})`;
 }
 function onAdjProductChange(){
   const p=state.products.find(x=>x.id===document.getElementById('adjSelect').value);
   if(!p) return;
   const u=unitInfo(p.name);
-  document.getElementById('adjQty').value=p.stock||0;
+  document.querySelectorAll('#adjModeSeg button').forEach(b=>b.classList.toggle('sel',b.dataset.m===adjMode));
+  document.getElementById('adjQtyLabel').textContent = adjMode==='set' ? '설정 수량 (현재고를 이 값으로 변경)' : '증감 수량 (감소는 음수)';
+  document.getElementById('adjQty').value = adjMode==='set' ? (p.stock||0) : '';
   document.getElementById('adjCur').textContent=`현재 시스템 재고: ${p.stock||0}${u.unit}`;
+  updateAdjPreview();
 }
 function closeAdjModal(){ document.getElementById('adjModal').style.display='none'; }
 async function saveAdjModal(){
   const pid=document.getElementById('adjSelect').value;
   const p=state.products.find(x=>x.id===pid);
-  const newVal=parseFloat(document.getElementById('adjQty').value);
+  const raw=parseFloat(document.getElementById('adjQty').value);
+  const newVal = adjMode==='set' ? raw : (p ? (p.stock||0)+raw : NaN);
   const memo = adjReasonSel==='기타' ? document.getElementById('adjReasonOther').value.trim() : (adjReasonSel||'');
   const err=document.getElementById('adjErr');
   if(!p){ err.textContent='제품을 선택하세요'; return; }
-  if(isNaN(newVal)||newVal<0){ err.textContent='0 이상의 실제 수량을 입력하세요'; return; }
+  if(adjMode==='delta' && (isNaN(raw)||raw===0)){ err.textContent='0이 아닌 증감 수량을 입력하세요'; return; }
+  if(isNaN(newVal)||newVal<0){ err.textContent = adjMode==='set' ? '0 이상의 실제 수량을 입력하세요' : '조정 후 재고가 0보다 작아집니다'; return; }
   if(!memo){ err.textContent='조정 사유를 선택하세요'; return; }
   const delta = newVal-(p.stock||0);
   if(delta===0){ err.textContent='현재 재고와 같습니다 — 조정할 필요가 없어요'; return; }
@@ -1203,6 +1294,61 @@ async function saveAdjModal(){
     err.textContent='저장 실패 — 네트워크·권한을 확인하세요';
   }finally{
     btn.disabled=false; btn.textContent='저장';
+  }
+}
+
+/* ---------- 실사 시작: 전체 재고 0으로 ----------
+   이력은 지우지 않고, 재고가 0이 아닌 품목마다 type:'adj'(원재료는 mkind:'adj') 이력을 남기며
+   increment(-현재고)로 0을 만든다(HARD RULE 4). 이력 탭에서 개별 삭제하면 removeLog가 되돌린다.
+   실행 전 입출고 CSV를 자동으로 내려받아 백업한다. */
+function openResetModal(){
+  document.getElementById('resetConfirm').value='';
+  document.getElementById('resetErr').textContent='';
+  document.getElementById('resetMat').checked=true;
+  const np=state.products.filter(p=>(p.stock||0)!==0).length;
+  const nm=state.materials.filter(m=>(m.stock||0)!==0).length;
+  document.getElementById('resetSummary').textContent=`대상: 완제품 ${np}종 · 원재료 ${nm}종 (재고가 이미 0인 품목은 그대로)`;
+  document.getElementById('resetModal').style.display='flex';
+}
+function closeResetModal(){ document.getElementById('resetModal').style.display='none'; }
+async function runReset(){
+  const err=document.getElementById('resetErr');
+  if(document.getElementById('resetConfirm').value.trim()!=='초기화'){ err.textContent="'초기화'를 정확히 입력하세요"; return; }
+  const withMat=document.getElementById('resetMat').checked;
+  const prods=state.products.filter(p=>(p.stock||0)!==0);
+  const mats=withMat ? state.materials.filter(m=>(m.stock||0)!==0) : [];
+  if(!prods.length && !mats.length){ err.textContent='이미 모든 재고가 0입니다'; return; }
+  const btn=document.getElementById('resetSaveBtn'); btn.disabled=true; btn.textContent='초기화 중…';
+  err.textContent='';
+  try{ exportCSV(); }catch(e){ console.error('백업 CSV 실패',e); }
+  const now=Date.now(), dLabel=dateLabel(), memo='실사 시작 (전체 0 초기화)';
+  const pEntries=prods.map((p,i)=>({ pid:p.id, pname:p.name, type:'adj', qty:-(p.stock||0), chan:'재고조정', user:state.user, memo, ts:now+i, date:dLabel }));
+  const mEntries=mats.map((m,i)=>({ kind:'material', matId:m.id, matName:m.name, mkind:'adj', qty:-(m.stock||0), user:state.user, memo, ts:now+prods.length+i, date:dLabel }));
+  try{
+    if(FS){
+      const batch=FS.writeBatch(FS.db);
+      pEntries.forEach(e=>{
+        batch.update(FS.doc(FS.db,'products',e.pid), {stock: FS.increment(e.qty)});
+        batch.set(FS.doc(FS.collection(FS.db,'logs')), e);
+      });
+      mEntries.forEach(e=>{
+        batch.update(FS.doc(FS.db,'materials',e.matId), {stock: FS.increment(e.qty)});
+        batch.set(FS.doc(FS.collection(FS.db,'logs')), e);
+      });
+      await batch.commit();
+    }else{
+      prods.forEach(p=>p.stock=0);
+      mats.forEach(m=>m.stock=0);
+      [...pEntries,...mEntries].forEach((e,i)=>state.logs.unshift({id:'l'+now+'_'+i, ...e}));
+      saveLocal(); render();
+    }
+    closeResetModal();
+    go('stock');
+  }catch(e){
+    console.error('초기화 실패',e);
+    err.textContent='초기화 실패 — 네트워크·권한을 확인하세요 (재고는 바뀌지 않았습니다)';
+  }finally{
+    btn.disabled=false; btn.textContent='0으로 초기화';
   }
 }
 
