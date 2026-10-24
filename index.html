@@ -579,10 +579,10 @@ const FIREBASE_CONFIG = {
 /* ▲▲▲  여기 위까지만 수정  ▲▲▲ */
 
 const SEED = [
-  {name:'퓨어플레인츄잉 35g', stock:104},
-  {name:'퓨어플레인츄잉 70g', stock:42},
-  {name:'닭안심 회오리츄잉 35g', stock:63},
-  {name:'닭안심 회오리츄잉 70g', stock:51},
+  {name:'퓨어플레인츄잉 35g', stock:0},
+  {name:'퓨어플레인츄잉 70g', stock:0},
+  {name:'닭안심 회오리츄잉 35g', stock:0},
+  {name:'닭안심 회오리츄잉 70g', stock:0},
   {name:'베이비 퓨어 츄잉', stock:0},
   {name:'퓨어 본랩 (스몰)', stock:0},
   {name:'퓨어 본랩 (라지)', stock:0},
@@ -634,10 +634,36 @@ let lastPriceMatKey=null, lastBatchMatKey=null;
 let FS = null; // firestore handle when online
 
 /* ---------- storage layer ---------- */
-const useFB = FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.apiKey;
+const useFB = !!(FIREBASE_CONFIG.projectId && FIREBASE_CONFIG.apiKey);
+let cloudReady=false, serverCacheTime=0;
+const cloudCollections={products:false,materials:false,logs:false};
+function canWriteInventory(){return !useFB || (cloudReady && !!FS && navigator.onLine!==false);}
+function assertWritable(){if(!canWriteInventory())throw new Error('서버 연결을 확인하지 못해 저장을 중단했습니다. 연결이 복구된 뒤 다시 시도해 주세요.');}
+function cacheServerState(){
+  if(!cloudReady)return;
+  serverCacheTime=Date.now();
+  try{localStorage.setItem('pf_server_cache',JSON.stringify({products:state.products,materials:state.materials,logs:state.logs,savedAt:serverCacheTime}));}catch(e){console.warn('최근 서버 자료를 이 기기에 보관하지 못했습니다.');}
+}
+function restoreServerCache(){
+  try{const cache=JSON.parse(localStorage.getItem('pf_server_cache')||'null');if(cache&&Array.isArray(cache.products)&&Array.isArray(cache.materials)&&Array.isArray(cache.logs)){state.products=cache.products;state.materials=cache.materials;state.logs=cache.logs;serverCacheTime=cache.savedAt||0;return true;}}catch(e){}
+  state.products=[];state.materials=[];state.logs=[];return false;
+}
+function collectionStatus(key,snapshot){
+  cloudCollections[key]=!snapshot.metadata?.fromCache;
+  cloudReady=Object.values(cloudCollections).every(Boolean)&&navigator.onLine!==false;
+  if(cloudReady)cacheServerState();
+  setSync(cloudReady);
+}
+function collectionFailure(key,error){
+  cloudCollections[key]=false;cloudReady=false;
+  console.warn('재고 동기화 실패',key,error?.code||'연결 오류');setSync(false);render();
+}
+window.addEventListener('offline',()=>{if(useFB){Object.keys(cloudCollections).forEach(k=>cloudCollections[k]=false);cloudReady=false;setSync(false);render();}});
+window.addEventListener('online',()=>{if(useFB&&!cloudReady)setSync(false);});
 
 async function initStore(){
   if(useFB){
+    restoreServerCache();setSync(false);render();
     try{
       const {initializeApp} = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js');
       const fs = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
@@ -648,7 +674,7 @@ async function initStore(){
       try{
         const authMod = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js');
         await authMod.signInAnonymously(authMod.getAuth(app));
-      }catch(authErr){ console.warn('익명 로그인 건너뜀 (콘솔에서 익명 인증을 켜세요):', authErr?.code||authErr); }
+      }catch(authErr){ throw authErr; }
       // seed products once
       const pSnap = await fs.getDocs(fs.collection(db,'products'));
       if(pSnap.empty){
@@ -672,21 +698,23 @@ async function initStore(){
           }
         }
       }
-      fs.onSnapshot(fs.collection(db,'products'), s=>{
+      fs.onSnapshot(fs.collection(db,'products'), {includeMetadataChanges:true}, s=>{
         state.products = s.docs.map(d=>({id:d.id,...d.data()})).sort((a,b)=>a.order-b.order);
-        render();
-      });
-      fs.onSnapshot(fs.collection(db,'materials'), s=>{
+        collectionStatus('products',s);render();
+      },e=>collectionFailure('products',e));
+      fs.onSnapshot(fs.collection(db,'materials'), {includeMetadataChanges:true}, s=>{
         state.materials = s.docs.map(d=>({id:d.id,...d.data()}));
-        render();
-      });
-      fs.onSnapshot(fs.query(fs.collection(db,'logs'), fs.orderBy('ts','desc'), fs.limit(300)), s=>{
+        collectionStatus('materials',s);render();
+      },e=>collectionFailure('materials',e));
+      fs.onSnapshot(fs.query(fs.collection(db,'logs'), fs.orderBy('ts','desc'), fs.limit(300)), {includeMetadataChanges:true}, s=>{
         state.logs = s.docs.map(d=>({id:d.id,...d.data()}));
-        render();
-      });
-      setSync(true);
+        collectionStatus('logs',s);render();
+      },e=>collectionFailure('logs',e));
       return;
-    }catch(e){ console.error('Firebase 실패, 로컬 모드로 전환',e); }
+    }catch(e){
+      console.warn('서버 연결 실패 — 최근 서버 자료만 표시합니다.',e?.code||'연결 오류');
+      FS=null;cloudReady=false;Object.keys(cloudCollections).forEach(k=>cloudCollections[k]=false);restoreServerCache();setSync(false);render();return;
+    }
   }
   // localStorage fallback
   document.getElementById('offBanner').style.display='block';
@@ -714,17 +742,26 @@ async function initStore(){
 }
 function saveLocal(){ if(!FS) localStorage.setItem('pf_state', JSON.stringify({products:state.products,logs:state.logs,materials:state.materials})); }
 function setSync(on){
-  const el=document.getElementById('sync');
+  const el=document.getElementById('sync'),banner=document.getElementById('offBanner');
   el.className='sync '+(on?'on':'off');
-  document.getElementById('syncTxt').textContent = on?'실시간 동기화':'이 기기 저장';
+  document.getElementById('syncTxt').textContent=useFB?(on?'서버 연결됨':serverCacheTime?'최근 자료 · 저장 중단':'연결 확인 필요'):'이 기기 저장';
+  banner.style.display=on?'none':'block';
+  if(useFB){
+    banner.textContent=serverCacheTime
+      ? '서버 연결을 확인하지 못했습니다. '+new Date(serverCacheTime).toLocaleString('ko-KR')+'에 확인한 자료입니다. 연결이 복구될 때까지 저장·취소·초기화를 중단합니다.'
+      : '서버 재고를 아직 확인하지 못했습니다. 수량을 임의로 표시하거나 저장하지 않습니다. 인터넷 연결을 확인한 뒤 다시 열어 주세요.';
+    if(localStorage.getItem('pf_state'))banner.textContent+=' 이 기기에 별도 로컬 기록이 남아 있습니다. 서버 자료에 자동으로 합치지 않습니다.';
+  }else banner.textContent='이 기기에만 저장 중입니다. 다른 휴대폰·포키와는 재고가 공유되지 않습니다.';
 }
 
 /* ---------- actions ---------- */
 async function updateProduct(prodId, patch){
+  assertWritable();
   if(FS){ await FS.updateDoc(FS.doc(FS.db,'products',prodId), patch); }
   else { const p=state.products.find(x=>x.id===prodId); if(p) Object.assign(p,patch); saveLocal(); render(); }
 }
 async function deleteProductDoc(prodId){
+  assertWritable();
   if(FS){ await FS.deleteDoc(FS.doc(FS.db,'products',prodId)); }
   else { state.products=state.products.filter(x=>x.id!==prodId); saveLocal(); render(); }
 }
@@ -782,6 +819,7 @@ async function deleteProductFromModal(){
 
 /* ---------- 새 제품 추가 ---------- */
 async function addProduct(name, stock){
+  assertWritable();
   const order = state.products.length ? Math.max(...state.products.map(p=>p.order||0))+1 : 0;
   if(FS){
     await FS.setDoc(FS.doc(FS.collection(FS.db,'products')), {name, stock, order});
@@ -818,6 +856,7 @@ async function saveAddProdModal(){
 
 /* ---------- 원재료 추가/관리(이름·단위·기준치 수정, 삭제) ---------- */
 async function addMaterial(name, unit, stock){
+  assertWritable();
   const order = state.materials.length ? Math.max(...state.materials.map(m=>m.order||0))+1 : 0;
   if(FS){
     await FS.setDoc(FS.doc(FS.collection(FS.db,'materials')), {name, unit, stock, min:0, order});
@@ -827,10 +866,12 @@ async function addMaterial(name, unit, stock){
   }
 }
 async function updateMaterial(matId, patch){
+  assertWritable();
   if(FS){ await FS.updateDoc(FS.doc(FS.db,'materials',matId), patch); }
   else{ const m=state.materials.find(x=>x.id===matId); if(m) Object.assign(m,patch); saveLocal(); render(); }
 }
 async function deleteMaterialDoc(matId){
+  assertWritable();
   if(FS){ await FS.deleteDoc(FS.doc(FS.db,'materials',matId)); }
   else{ state.materials=state.materials.filter(x=>x.id!==matId); saveLocal(); render(); }
 }
@@ -917,6 +958,7 @@ async function deleteMaterialFromModal(){
 }
 
 async function commitMove(prodId, delta, entry){
+  assertWritable();
   if(FS){
     // 원자적: 서버가 재고를 직접 가감(increment)하고, 재고+이력을 한 배치로 커밋
     const batch = FS.writeBatch(FS.db);
@@ -930,84 +972,73 @@ async function commitMove(prodId, delta, entry){
     saveLocal(); render();
   }
 }
+const deletingLogs=new Set();
+function cancellationTombstone(log){
+  const t={kind:'assistantCancelled',source:'petfocus-assistant',type:'adj',qty:0,pname:log.pname||log.matName||'',recordUnit:log.recordUnit||'',originalQuantity:log.qty,date:log.date||dateLabel(),user:state.user,ts:Date.now(),memo:'비서 기록 취소: '+log.qty+(log.recordUnit||'')+' / 앱에서 취소'};
+  if(log.dateISO)t.dateISO=log.dateISO;
+  if(log.sourceFingerprint)t.sourceFingerprint=log.sourceFingerprint;
+  if(log.operationId)t.operationId=log.operationId;
+  return t;
+}
+function reversalItems(log){
+  const qty=Number(log.qty);if(!Number.isFinite(qty))throw new Error('기록 수량이 올바르지 않습니다.');
+  if(log.kind==='material')return [{collection:'materials',id:log.matId,delta:-qty,priced:log.unitPrice>0}];
+  if(!['in','out','adj'].includes(log.type))throw new Error('지원하지 않는 기록입니다.');
+  const rows=[{collection:'products',id:log.pid,delta:log.type==='out'?qty:-qty}];
+  if(log.type==='in')Object.entries(log.matUsed||{}).forEach(([id,value])=>{const n=Number(value);if(!Number.isFinite(n)||n<0)throw new Error('투입량 기록을 확인해 주세요.');if(n)rows.push({collection:'materials',id,delta:n});});
+  return rows;
+}
+function reversalPatch(row,current,log){
+  const next=(current.stock||0)+row.delta;
+  if(next < -0.000001)throw new Error('취소하면 '+(current.name||'품목')+' 재고가 음수가 됩니다. 이미 사용·출고된 수량을 확인해 주세요.');
+  const patch={};
+  if(row.priced)patch.avgCost=next>0?Math.max(0,((current.avgCost||0)*(current.stock||0)-(log.totalCost||0))/next):0;
+  return patch;
+}
 async function removeLog(log){
   if(log.kind==='assistantCancelled'){alert('취소 이력은 중복 반영 방지를 위해 유지됩니다.');return;}
-  if(!confirm('이 기록을 삭제하고 재고를 되돌릴까요?')) return;
-  if(log.kind==='material'){
-    const matExists = state.materials.some(x=>x.id===log.matId);
+  if(!canWriteInventory()){alert('서버 연결 확인 후 기록을 취소할 수 있습니다.');return;}
+  if(deletingLogs.has(log.id))return;
+  deletingLogs.add(log.id);
+  try{
+    if(!confirm('이 기록을 삭제하고 재고를 되돌릴까요?'))return;
+    let changed=false;
     if(FS){
-      try{
-        if(matExists && log.unitPrice>0){
-          // 단가 있는 매입 취소: 재고와 함께 가중평균단가도 역산으로 되돌린다 (commitMatBuy와 같은 이유로 트랜잭션)
-          await FS.runTransaction(FS.db, async (tx)=>{
-            const ref=FS.doc(FS.db,'materials',log.matId);
-            const snap=await tx.get(ref);
-            const cur=snap.data()||{};
-            const curStock=cur.stock||0, curAvg=cur.avgCost||0;
-            const newStock=curStock-log.qty;
-            const newAvg = newStock>0 ? Math.max(0,(curAvg*curStock-(log.totalCost||0))/newStock) : 0;
-            tx.update(ref, {stock:newStock, avgCost:newAvg});
-            tx.delete(FS.doc(FS.db,'logs',log.id));
-          });
-        }else{
-          const batch = FS.writeBatch(FS.db);
-          if(matExists) batch.update(FS.doc(FS.db,'materials',log.matId), {stock: FS.increment(-log.qty)});
-          batch.delete(FS.doc(FS.db,'logs',log.id));
-          await batch.commit();
-        }
-      }catch(e){
-        console.error('삭제 실패',e);
-        alert('삭제에 실패했습니다.\n네트워크 상태나 Firebase 권한을 확인해 주세요.');
-      }
-    }else{
-      const m=state.materials.find(x=>x.id===log.matId);
-      if(m){
-        const curStock=m.stock||0, curAvg=m.avgCost||0;
-        const newStock=curStock-log.qty;
-        if(log.unitPrice>0) m.avgCost = newStock>0 ? Math.max(0,(curAvg*curStock-(log.totalCost||0))/newStock) : 0;
-        m.stock=newStock;
-      }
-      state.logs=state.logs.filter(l=>l.id!==log.id);
-      saveLocal(); render();
-    }
-    return;
-  }
-  // in: 되돌리려면 -qty, out: +qty, adj: qty가 이미 부호를 가지므로 -qty
-  const revert = log.type==='in' ? -log.qty : (log.type==='out' ? log.qty : -log.qty);
-  if(FS){
-    try{
-      const batch = FS.writeBatch(FS.db);
-      if(state.products.some(x=>x.id===log.pid))
-        batch.update(FS.doc(FS.db,'products',log.pid), {stock: FS.increment(revert)});
-      if(log.matUsed){
-        Object.keys(log.matUsed).forEach(id=>{
-          const u=log.matUsed[id]||0;
-          if(u) batch.update(FS.doc(FS.db,'materials',id), {stock: FS.increment(u)});
-        });
-      }
-      batch.delete(FS.doc(FS.db,'logs',log.id));
-      await batch.commit();
-    }catch(e){
-      console.error('삭제 실패',e);
-      alert('삭제에 실패했습니다.\n네트워크 상태나 Firebase 권한을 확인해 주세요.');
-    }
-  }else{
-    const p=state.products.find(x=>x.id===log.pid);
-    if(p) p.stock=(p.stock||0)+revert;
-    if(log.matUsed){
-      Object.keys(log.matUsed).forEach(id=>{
-        const u=log.matUsed[id]||0;
-        if(u){ const m=state.materials.find(x=>x.id===id); if(m) m.stock=(m.stock||0)+u; }
+      // Read the log in a transaction, then use increment for stock changes.
+      // A second device deleting the same log must not restore stock twice.
+      changed=await FS.runTransaction(FS.db,async tx=>{
+        const logRef=FS.doc(FS.db,'logs',log.id),logSnap=await tx.get(logRef);
+        if(!logSnap.exists())return false;
+        const current={id:log.id,...logSnap.data()};
+        if(current.kind==='assistantCancelled')return false;
+        const rows=reversalItems(current);
+        const refs=rows.map(r=>FS.doc(FS.db,r.collection,r.id));
+        const snapshots=await Promise.all(refs.map(ref=>tx.get(ref)));
+        const patches=snapshots.map((snap,i)=>{if(!snap.exists())throw new Error('품목이 삭제되어 자동으로 되돌릴 수 없습니다.');return reversalPatch(rows[i],snap.data(),current);});
+        rows.forEach((r,i)=>tx.update(refs[i],{stock:FS.increment(r.delta),...patches[i]}));
+        if(current.source==='petfocus-assistant')tx.set(logRef,cancellationTombstone(current));
+        else tx.delete(logRef);
+        return true;
       });
+    }else{
+      const current=state.logs.find(l=>l.id===log.id);
+      if(!current||current.kind==='assistantCancelled')return;
+      const rows=reversalItems(current),targets=rows.map(r=>(r.collection==='products'?state.products:state.materials).find(p=>p.id===r.id));
+      const patches=targets.map((target,i)=>{if(!target)throw new Error('품목이 삭제되어 자동으로 되돌릴 수 없습니다.');return reversalPatch(rows[i],target,current);});
+      targets.forEach((target,i)=>{target.stock=(target.stock||0)+rows[i].delta;Object.assign(target,patches[i]);});
+      if(current.source==='petfocus-assistant'){const index=state.logs.indexOf(current);state.logs[index]={id:current.id,...cancellationTombstone(current)};}
+      else state.logs=state.logs.filter(l=>l.id!==current.id);
+      saveLocal();render();changed=true;
     }
-    state.logs=state.logs.filter(l=>l.id!==log.id);
-    saveLocal(); render();
-  }
+    if(!changed)alert('이미 취소된 기록입니다. 재고는 다시 변경하지 않았습니다.');
+  }catch(e){console.warn('기록 취소 실패',e);alert(e.message||'취소에 실패했습니다. 연결 상태를 확인해 주세요.');}
+  finally{deletingLogs.delete(log.id);}
 }
 
 /* ---------- materials (원재료 매입/조정) ---------- */
 function matStock(id){ const m=state.materials.find(x=>x.id===id); return m?(m.stock||0):0; }
 async function commitMatMove(id, delta, entry){
+  assertWritable();
   if(FS){
     const batch = FS.writeBatch(FS.db);
     batch.update(FS.doc(FS.db,'materials',id), {stock: FS.increment(delta)});
@@ -1026,6 +1057,7 @@ async function commitMatMove(id, delta, entry){
    (두 사람이 동시에 같은 원재료를 매입해도 손실 갱신 없음). 단가 없이 수량만 매입하면
    기존처럼 increment 배치만 쓴다. */
 async function commitMatBuy(id, qty, unitPrice, entry){
+  assertWritable();
   if(!(unitPrice>0)) return commitMatMove(id, qty, entry); // 단가 없으면 기존 경로 그대로
   const totalCost = qty*unitPrice;
   entry.unitPrice = unitPrice; entry.totalCost = totalCost;
@@ -1149,6 +1181,7 @@ async function saveMatModal(){
 
 /* ---------- 생산 배치 저장 (원재료 차감 + 제품 증가 + 이력 기록, 원자적) ---------- */
 async function commitBatch(prodId, outQty, used, entry){
+  assertWritable();
   if(FS){
     const batch = FS.writeBatch(FS.db);
     batch.update(FS.doc(FS.db,'products',prodId), {stock: FS.increment(outQty)});
@@ -1374,6 +1407,7 @@ function openResetModal(){
 function closeResetModal(){ document.getElementById('resetModal').style.display='none'; }
 async function runReset(){
   const err=document.getElementById('resetErr');
+  if(!canWriteInventory()){err.textContent='서버 연결 확인 후 초기화할 수 있습니다.';return;}
   if(document.getElementById('resetConfirm').value.trim()!=='초기화'){ err.textContent="'초기화'를 정확히 입력하세요"; return; }
   const withMat=document.getElementById('resetMat').checked;
   const prods=state.products.filter(p=>(p.stock||0)!==0);
@@ -1446,6 +1480,7 @@ async function saveDailyReview(key,status){
   const patch={kind:'dailyCheck',dateISO:day,date:dateLabel(day),ts:at,['check_'+key]:{status,at,user:state.user,signature:moves.map(m=>m.id).sort().join('|')}};
   dailyBusy=true;document.getElementById('dailyError').textContent='저장 중…';renderDashboard();
   try{
+    assertWritable();
     if(FS){ await FS.setDoc(FS.doc(FS.db,'logs',id),patch,{merge:true}); }
     else{
       const old=state.logs.find(l=>l.id===id);
@@ -1632,6 +1667,12 @@ function render(){
   // 탭 배지
   const nb=document.getElementById('navBadge');
   if(nb){ nb.textContent=totalNeed; nb.style.display=totalNeed?'block':'none'; }
+
+  if(useFB&&!cloudReady&&!serverCacheTime){
+    ['sMade','sBuy','sLow'].forEach(id=>document.getElementById(id).textContent='—');
+    document.getElementById('sLowL').textContent='연결 후 확인';
+    document.getElementById('dashStockBars').textContent='서버 재고를 확인한 뒤 표시합니다.';
+  }
 
   // product select (대분류별 optgroup)
   const sel=document.getElementById('mProd'); const cur=sel.value;
