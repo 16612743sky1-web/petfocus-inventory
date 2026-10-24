@@ -931,6 +931,7 @@ async function commitMove(prodId, delta, entry){
   }
 }
 async function removeLog(log){
+  if(log.kind==='assistantCancelled'){alert('취소 이력은 중복 반영 방지를 위해 유지됩니다.');return;}
   if(!confirm('이 기록을 삭제하고 재고를 되돌릴까요?')) return;
   if(log.kind==='material'){
     const matExists = state.materials.some(x=>x.id===log.matId);
@@ -1710,6 +1711,7 @@ function render(){
   const movementLogs=state.logs.filter(l=>l.kind!=='dailyCheck');
   if(!movementLogs.length){ ll.innerHTML='<div class="empty">아직 기록이 없습니다.<br>입출고 탭에서 첫 기록을 남겨보세요.</div>'; }
   else ll.innerHTML=movementLogs.map(l=>{
+    if(l.kind==='assistantCancelled')return `<div class="card log"><span class="tag out">취소</span><div class="li"><b>${esc(l.pname)}</b><small>${esc(l.date)} · ${esc(l.user)} · ${esc(l.memo)}</small></div></div>`;
     if(l.kind==='material'){
       const plus=l.qty>=0;
       return `<div class="card log">
@@ -1773,7 +1775,7 @@ async function exportCSV(){
   let logs=state.logs;
   if(FS){const snapshot=await FS.getDocs(FS.collection(FS.db,'logs'));logs=snapshot.docs.map(d=>({id:d.id,...d.data()}));}
   const rows=[['날짜','제품 또는 원재료','유형','수량','판매처','담당','메모','개당제조원가','수율(%)','입고단가','매입금액']];
-  logs.filter(l=>l.kind!=='dailyCheck').sort((a,b)=>b.ts-a.ts).forEach(l=>rows.push([l.dateISO||l.date,l.pname||l.matName,l.kind==='material'?(l.mkind==='buy'?'원재료매입':'원재료조정'):(l.type==='in'?'입고':(l.type==='out'?'출고':'조정')),l.qty,l.chan||'',l.user,l.memo||'',l.unitCost??'',l.yieldPct??'',l.unitPrice??'',l.totalCost??'']));
+  logs.filter(l=>l.kind!=='dailyCheck').sort((a,b)=>b.ts-a.ts).forEach(l=>rows.push([l.dateISO||l.date,l.pname||l.matName,l.kind==='assistantCancelled'?'비서기록취소':l.kind==='material'?(l.mkind==='buy'?'원재료매입':'원재료조정'):(l.type==='in'?'입고':(l.type==='out'?'출고':'조정')),l.qty,l.chan||'',l.user,l.memo||'',l.unitCost??'',l.yieldPct??'',l.unitPrice??'',l.totalCost??'']));
   const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
   a.download='펫포커스_입출고_'+todayISO()+'.csv'; a.click();
