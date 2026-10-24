@@ -203,6 +203,19 @@ nav button.sel{color:var(--brand)}
 .banner{font-size:12px;background:var(--warnbg);color:#8a5a10;padding:10px 12px;border-radius:11px;margin:12px 0;line-height:1.5}
 .banner b{color:var(--warn)}
 </style>
+<style>
+.dash{margin:16px 0}.dash h2{font-size:20px;letter-spacing:-.04em;margin:0 0 5px}.dash p{margin:5px 0 12px;color:var(--sub);font-size:13px}
+.daycheck{padding:17px;margin-bottom:14px;border-top:4px solid var(--brand)}
+.dashdate{display:flex;gap:8px;align-items:center;margin:12px 0}.dashdate input{min-width:0;flex:1;padding:9px;min-height:44px;font-size:15px}
+.checkrow{border-top:1px solid var(--line);padding:13px 0}.checkrow b{font-size:15px}.checkrow small{display:block;margin:4px 0 8px;color:var(--sub)}
+.checkactions{display:flex;gap:6px;flex-wrap:wrap}.checkactions button,.dash button{font:inherit;font-size:12px;font-weight:700;border:1px solid var(--line);background:var(--paper);color:var(--brand);border-radius:9px;padding:10px;cursor:pointer;min-height:42px}
+.checkactions button.primary{background:var(--brand);color:var(--paper);border-color:var(--brand)}.checkactions button:disabled{opacity:.45}
+.checkstatus{float:right;font-size:11px;padding:3px 7px;border-radius:6px;background:var(--warnbg);color:var(--warn)}.checkstatus.done{background:var(--okbg);color:var(--in)}
+.dashmetrics{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin:12px 0}.dashmetric{padding:14px}.dashmetric small{display:block;font-size:12px;color:var(--sub)}.dashmetric strong{font-size:25px;display:block;margin-top:5px;letter-spacing:-.04em}.dashmetric em{font-style:normal;font-size:12px;color:var(--sub)}
+.chartcard{padding:16px;margin:12px 0}.chartcard h3{font-size:15px;margin:0 0 10px}.chartcard select{min-height:44px;padding:10px;font-size:14px;margin-bottom:10px}.chartcard svg{width:100%;height:auto;display:block}.chartlegend{display:flex;gap:15px;font-size:12px;color:var(--sub);margin-bottom:8px}.chartlegend i{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:4px}.chartlegend .in{background:var(--in)}.chartlegend .out{background:var(--out)}
+.stockbar{margin:12px 0;font-size:12px}.stockbar span{display:flex;justify-content:space-between;gap:8px}.stockbar .track{height:8px;background:var(--bg);border-radius:8px;margin-top:6px;overflow:hidden}.stockbar .fill{height:100%;background:var(--in)}.stockbar .fill.low{background:var(--warn)}
+.dasherr{color:var(--out);font-size:12px;min-height:18px}.dashfoot{font-size:11px!important;line-height:1.6}
+</style>
 </head>
 <body>
 
@@ -220,9 +233,27 @@ nav button.sel{color:var(--brand)}
 </header>
 
 <div class="wrap">
+<div id="draftNotice" class="banner" style="display:none"></div>
 
 <!-- 재고 -->
 <section class="tab on" id="t-stock">
+  <div class="dash">
+    <div class="card daycheck">
+      <h2>오늘 기록, 빠진 게 있나요?</h2>
+      <p>입고 · 생산 · 출고를 확인해 주세요. 작업이 없었던 날도 남길 수 있어요.</p>
+      <div class="dashdate"><input id="dashDate" aria-label="기록 확인 날짜" type="date" onchange="renderDashboard()"><button onclick="document.getElementById('dashDate').value=todayISO();renderDashboard()">오늘</button></div>
+      <details id="dailyDetails" open><summary style="font-size:13px;font-weight:700;margin-bottom:8px">입고·생산·출고 확인하기</summary>
+      <div id="dailyQuestions"></div>
+      </details>
+      <div id="dailyError" class="dasherr" role="status"></div>
+      <p class="dashfoot">확인 후 새 기록이 생기면 다시 확인합니다. 앱 밖 알림은 아직 없습니다.</p>
+    </div>
+    <div id="dashMetrics" class="dashmetrics"></div>
+    <div class="card chartcard"><h3>최근 7일 · 제품별 입고와 출고</h3><select id="dashProduct" aria-label="추이 확인 제품" onchange="renderDashboard()"></select><div class="chartlegend"><span><i class="in"></i>완제품 입고</span><span><i class="out"></i>출고</span></div><div id="dashTrend"></div><p class="dashfoot">입고는 생산배치와 수동 입고를 포함합니다. — 표시는 기록 없음·미확인입니다. 기록이 있는 날도 전체 작업량을 보장하지 않습니다.</p></div>
+    <div class="card chartcard"><h3>거래처별 출고 · 선택 제품 7일</h3><div id="dashChannels"></div><p class="dashfoot">위에서 선택한 제품의 출고 기록입니다. 매출액·주문 자동 수집 수치가 아닙니다.</p></div>
+    <div class="card chartcard"><h3>먼저 보충할 제품</h3><div id="dashStockBars"></div><p class="dashfoot">품목별 적정재고 대비 현재 수량입니다. EA와 box는 따로 표시합니다.</p></div>
+    <p class="dashfoot">집계는 최근 불러온 이력 최대 300건 기준입니다. 과거 기록이 빠졌거나 300건을 넘으면 집계가 일부만 보일 수 있습니다. 예전 기록은 연도가 없어 저장 시각의 연도를 사용합니다. 매출·자동 주문 연동은 아직 포함하지 않습니다.</p>
+  </div>
   <div id="offBanner" class="banner" style="display:none">
     <b>⚠ 단일 기기 모드</b> — 지금은 이 폰에만 저장됩니다. 두 형제가 실시간으로 같이 보려면 파일 상단 <b>FIREBASE_CONFIG</b>에 설정값을 넣으세요. (설정 방법은 대화 안내 참고)
   </div>
@@ -231,20 +262,27 @@ nav button.sel{color:var(--brand)}
     <div class="card"><div class="n" id="sBuy">0</div><div class="l">맘엔펫 납품 <span class="cu">box</span></div></div>
     <div class="card alert"><div class="n" id="sLow">0</div><div class="l" id="sLowL">보충 필요</div></div>
   </div>
-  <div id="lowAlert"></div>
+  <details id="stockDetails"><summary style="font-weight:700">전체 품목·재고 조정</summary>
+  <div id="lowAlert" style="display:none"></div>
   <div class="rowtools">
     <button onclick="openAddProdModal()">＋ 제품 추가</button>
     <button onclick="openAdjModal()">🔧 재고 조정 (실사·파손)</button>
   </div>
-  <div class="rowtools">
-    <button onclick="openResetModal()">🔄 실사 시작 — 전체 재고 0으로</button>
-  </div>
+  <details style="margin:12px 0"><summary>실사·초기 설정</summary><div class="rowtools" style="margin-top:10px"><button onclick="openResetModal()">실사 시작 — 전체 재고 0으로</button></div></details>
   <h2 class="sec">품목별 현재재고</h2>
   <div id="stockList"></div>
+  </details>
 </section>
 
 <!-- 입출고 -->
 <section class="tab" id="t-move">
+  <div class="card" style="padding:16px;margin-top:16px">
+    <b>말이나 짧은 문장으로 입력</b>
+    <p class="hint">예: 우피 100kg 입고 / 퓨어플레인츄잉 80개 생산 / 쿠팡 퓨어플레인츄잉 10개 출고<br>제품명은 등록된 이름을 그대로 써 주세요. 입력칸을 채운 뒤 확인하고 저장합니다.</p>
+    <textarea id="quickText" rows="3" aria-label="입고 생산 출고 문장" style="width:100%;font:inherit;padding:12px;border:1px solid var(--line);border-radius:12px" placeholder="키보드 마이크로 말해도 됩니다"></textarea>
+    <div class="rowtools" style="margin-top:8px"><button onclick="dictateQuick()">🎤 말하기</button><button onclick="fillQuickEntry()">입력칸 채우기</button></div>
+    <div id="quickError" class="dasherr" role="status"></div>
+  </div>
   <h2 class="sec">입·출고 입력</h2>
   <div class="card" style="padding:16px 15px 20px">
     <label class="f">제품</label>
@@ -252,7 +290,7 @@ nav button.sel{color:var(--brand)}
 
     <label class="f">유형</label>
     <div class="seg">
-      <button data-v="in" class="sel" onclick="setType('in')">＋ 입고(생산)</button>
+      <button data-v="in" class="sel" onclick="setType('in')">＋ 완제품 입고</button>
       <button data-v="out" onclick="setType('out')">－ 출고(판매)</button>
     </div>
 
@@ -292,7 +330,7 @@ nav button.sel{color:var(--brand)}
 <section class="tab" id="t-log">
   <h2 class="sec">입출고 이력</h2>
   <div class="rowtools">
-    <button onclick="exportCSV()">⬇ 엑셀(CSV) 내보내기</button>
+    <button onclick="exportCSV().catch(()=>alert('내보내기에 실패했습니다. 연결 상태를 확인하고 다시 시도해 주세요.'))">⬇ 전체 이력 엑셀(CSV)</button>
   </div>
   <div id="logList"></div>
 </section>
@@ -309,7 +347,7 @@ nav button.sel{color:var(--brand)}
     <button onclick="openMatModal('adj')">🔧 조정 (폐기·실사차이)</button>
   </div>
 
-  <h2 class="sec">단가표 (수정 가능)</h2>
+  <details id="costSettings"><summary>원가 기준 단가 설정</summary><h2 class="sec">단가표 (수정 가능)</h2>
   <div class="card" style="padding:6px 14px">
     <table class="tbl">
       <tbody id="priceMatRows"></tbody>
@@ -318,24 +356,26 @@ nav button.sel{color:var(--brand)}
     </table>
   </div>
 
-  <h2 class="sec">생산 배치 저장</h2>
+  </details><h2 class="sec" id="productionHeading">생산 완료 기록</h2>
   <div class="card" style="padding:16px 15px 20px">
     <label class="f">생산 제품</label>
     <select id="b_prod"></select>
     <table class="tbl">
       <tbody id="batchMatRows"></tbody>
-      <tr><td>작업 시간 (h)</td><td><input type="number" id="b_work" value="2" step="0.5"></td></tr>
-      <tr><td>건조 시간 (h)</td><td><input type="number" id="b_dry" value="12"></td></tr>
-      <tr><td>산출 수량 (개)</td><td><input type="number" id="b_out" value="30"></td></tr>
+      <tr><td>작업 시간 (h)</td><td><input type="number" id="b_work" value="0" step="0.5"></td></tr>
+      <tr><td>건조 시간 (h)</td><td><input type="number" id="b_dry" value="0"></td></tr>
+      <tr><td>산출 수량 (개)</td><td><input type="number" id="b_out" placeholder="완성 수량"></td></tr>
       <tr><td>완성 중량 (kg, 선택)</td><td><input type="number" id="b_outkg" step="0.1" placeholder="수율 계산용"></td></tr>
       <tr><td>개당 판매공급가 (원)</td><td><input type="number" id="b_price" value="0"></td></tr>
     </table>
     <label class="f">메모 (선택)</label>
     <input id="b_memo" type="text" placeholder="예) 3차 배치, 건조기 2호">
+    <label class="f" for="bDate">생산 완료일</label>
+    <input id="bDate" type="date">
     <div class="card result" id="costRes"></div>
     <button class="save" id="batchSaveBtn" onclick="saveBatch()">배치 저장 (재고 반영)</button>
   </div>
-  <p class="hint">※ 배치 저장 시 원재료 재고가 차감되고 선택한 제품 재고가 늘어나며, 이력 탭에 원가·수율과 함께 기록됩니다.<br>※ 수율은 "우피" 원재료가 있을 때만 계산됩니다(완성중량÷우피투입량).<br>※ 마진은 <b>부가세 제외 공급가</b> 기준입니다. 소비자가에 부가세가 포함돼 있으면 공급가 = 소비자가 ÷ 1.1 로 넣으세요.<br>※ 노무·전기는 배치당 실제 소요를 나누므로, 여러 종류를 한 배치에 말리면 시간을 산출개수 비율로 안분하세요.</p>
+  <p class="hint">※ 배치 저장 시 원재료 재고가 차감되고 선택한 제품 재고가 늘어나며, 이력 탭에 원가·수율과 함께 기록됩니다.<br>※ 수율은 "우피" 원재료가 있을 때만 계산됩니다(완성중량÷우피투입량).<br>※ 차감액은 판매수수료·택배비·광고비 등을 빼기 전 금액이며 순이익이 아닙니다. <b>부가세 제외 공급가</b> 기준입니다. 소비자가에 부가세가 포함돼 있으면 공급가 = 소비자가 ÷ 1.1 로 넣으세요.<br>※ 노무·전기는 배치당 실제 소요를 나누므로, 여러 종류를 한 배치에 말리면 시간을 산출개수 비율로 안분하세요.</p>
 </section>
 
 </div>
@@ -500,9 +540,9 @@ nav button.sel{color:var(--brand)}
 </div>
 
 <nav>
-  <button class="sel" data-t="stock" onclick="go('stock')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg><span>재고</span><span class="navbadge" id="navBadge"></span></button>
-  <button data-t="move" onclick="go('move')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>입출고</span></button>
-  <button data-t="cost" onclick="go('cost')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><span>원가</span></button>
+  <button class="sel" data-t="stock" onclick="go('stock')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M9 4v16"/></svg><span>대시보드</span><span class="navbadge" id="navBadge"></span></button>
+  <button data-t="move" onclick="go('move')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 5v14M5 12h14"/></svg><span>빠른 기록</span></button>
+  <button data-t="cost" onclick="go('cost')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg><span>생산·원물</span></button>
   <button data-t="log" onclick="go('log')"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg><span>이력</span></button>
 </nav>
 
@@ -1077,7 +1117,7 @@ async function saveMatModal(){
   const dLabel = dateLabel(dv);
   const matObj=state.materials.find(x=>x.id===id);
   const entry={ kind:'material', matId:id, matName:matObj?matObj.name:id, mkind:matModalMode,
-    qty:delta, user:state.user, memo, ts:Date.now(), date:dLabel };
+    qty:delta, user:state.user, memo, ts:Date.now(), date:dLabel, dateISO:dv||todayISO() };
   try{
     if(matModalMode==='buy') await commitMatBuy(id, delta, unitPrice, entry);
     else await commitMatMove(id, delta, entry);
@@ -1147,14 +1187,17 @@ async function saveBatch(){
   const pcsPerKg = (woopiUsed>0) ? +(out/woopiUsed).toFixed(1) : null;
 
   const btn=document.getElementById('batchSaveBtn'); btn.disabled=true; btn.textContent='저장 중…';
-  const dLabel=dateLabel();
+  const productionDay=document.getElementById('bDate').value||todayISO();
+  const dLabel=dateLabel(productionDay);
   const memo=document.getElementById('b_memo').value.trim();
   const entry={ pid:prodId, pname:p.name, type:'in', qty:out, chan:'생산입고', user:state.user,
-    memo, ts:Date.now(), date:dLabel,
+    memo, ts:Date.now(), date:dLabel, dateISO:productionDay,
     matUsed: used,
-    unitCost:Math.round(unitCost), yieldPct, pcsPerKg };
+    unitCost:Math.round(unitCost), yieldPct, pcsPerKg,
+    outputKg:outkg,workHours:work,dryHours:dry,costBreakdown:{materials:mat,labor:lab,electricity:ele} };
   try{
     await commitBatch(prodId, out, used, entry);
+    clearDraft('cost');
     document.getElementById('b_memo').value=''; document.getElementById('b_outkg').value='';
     document.querySelectorAll('.b-mat-input').forEach(inp=>inp.value='0');
     go('log');
@@ -1167,7 +1210,7 @@ async function saveBatch(){
 }
 
 /* ---------- UI handlers ---------- */
-function setUser(u){ state.user=u; document.querySelectorAll('.uchip').forEach(c=>c.classList.toggle('sel',c.dataset.u===u)); }
+function setUser(u){ state.user=u; localStorage.setItem('pf_user',u); document.querySelectorAll('.uchip').forEach(c=>c.classList.toggle('sel',c.dataset.u===u)); }
 function setType(t){ type=t; document.querySelectorAll('.seg button').forEach(b=>b.classList.toggle('sel',b.dataset.v===t)); document.getElementById('chBox').style.display = t==='out'?'block':'none'; updatePreview(); }
 function stepQty(d){ const i=document.getElementById('mQty'); i.value=Math.max(1,(parseInt(i.value)||0)+d); updatePreview(); }
 document.getElementById('mChan').onclick=e=>{ if(e.target.dataset.c){ chan=e.target.dataset.c; document.querySelectorAll('#mChan button').forEach(b=>b.classList.toggle('sel',b.dataset.c===chan)); } };
@@ -1211,9 +1254,10 @@ async function saveMove(){
   const entry={ pid, pname:p.name, type, qty:q,
     chan: type==='out'?chan:'생산입고', user:state.user,
     memo:document.getElementById('mMemo').value.trim(),
-    ts:Date.now(), date:dLabel };
+    ts:Date.now(), date:dLabel, dateISO:dv||todayISO() };
   try{
     await commitMove(pid, type==='in'?q:-q, entry);
+    clearDraft('move');
     document.getElementById('mMemo').value=''; document.getElementById('mQty').value=1;
     document.getElementById('mDate').value=todayISO();
     go('stock');
@@ -1320,7 +1364,10 @@ async function runReset(){
   if(!prods.length && !mats.length){ err.textContent='이미 모든 재고가 0입니다'; return; }
   const btn=document.getElementById('resetSaveBtn'); btn.disabled=true; btn.textContent='초기화 중…';
   err.textContent='';
-  try{ exportCSV(); }catch(e){ console.error('백업 CSV 실패',e); }
+  try{ await exportCSV(); }catch(e){
+    err.textContent='백업을 만들지 못해 초기화를 중단했습니다. 연결을 확인해 주세요.';
+    btn.disabled=false;btn.textContent='0으로 초기화';return;
+  }
   const now=Date.now(), dLabel=dateLabel(), memo='실사 시작 (전체 0 초기화)';
   const pEntries=prods.map((p,i)=>({ pid:p.id, pname:p.name, type:'adj', qty:-(p.stock||0), chan:'재고조정', user:state.user, memo, ts:now+i, date:dLabel }));
   const mEntries=mats.map((m,i)=>({ kind:'material', matId:m.id, matName:m.name, mkind:'adj', qty:-(m.stock||0), user:state.user, memo, ts:now+prods.length+i, date:dLabel }));
@@ -1352,12 +1399,147 @@ async function runReset(){
   }
 }
 
+/* ---------- 날짜별 기록 확인 / 읽기 전용 대시보드 ---------- */
+const CHECK_SECTIONS=[['mat','오늘 원재료가 들어왔나요?'],['prod','오늘 완성·포장한 제품이 있나요?'],['out','오늘 출고한 제품이 있나요?']];
+let dailyBusy=false;
+function logDay(l){
+  if(l.dateISO) return l.dateISO;
+  // 구버전은 MM.DD만 저장했으므로 기록 시각의 연도를 사용한다. 원본은 바꾸지 않는다.
+  if(/^\d{2}\.\d{2}$/.test(l.date||'')) return new Date(l.ts).getFullYear()+'-'+l.date.replace('.','-');
+  return '';
+}
+function dayMoves(day,key){
+  return state.logs.filter(l=>logDay(l)===day && (key==='mat' ? l.kind==='material'&&l.mkind==='buy' : key==='prod' ? l.kind!=='material'&&l.kind!=='dailyCheck'&&l.type==='in' : l.kind!=='material'&&l.kind!=='dailyCheck'&&l.type==='out'));
+}
+function dailyReview(day,key){
+  const l=state.logs.find(l=>l.kind==='dailyCheck'&&l.dateISO===day);
+  const v=l&&l['check_'+key];
+  const moves=dayMoves(day,key);
+  if(v && v.signature!=null && v.signature!==moves.map(m=>m.id).sort().join('|')) return null;
+  if(!v || moves.some(m=>m.ts>v.at) || (v.status==='none'&&moves.length) || (v.status==='done'&&!moves.length)) return null;
+  return v;
+}
+async function saveDailyReview(key,status){
+  const day=document.getElementById('dashDate').value||todayISO();
+  if(dailyBusy||!CHECK_SECTIONS.some(s=>s[0]===key)) return;
+  const moves=dayMoves(day,key);
+  if(status==='none'&&moves.length){ document.getElementById('dailyError').textContent='해당 날짜에 이미 기록이 있습니다. 이력을 확인해 주세요.';return; }
+  if(status==='done'&&!moves.length){ document.getElementById('dailyError').textContent='먼저 기록을 입력하거나 작업 없음을 선택해 주세요.';return; }
+  const at=Date.now(), id='daily_'+day;
+  const patch={kind:'dailyCheck',dateISO:day,date:dateLabel(day),ts:at,['check_'+key]:{status,at,user:state.user,signature:moves.map(m=>m.id).sort().join('|')}};
+  dailyBusy=true;document.getElementById('dailyError').textContent='저장 중…';renderDashboard();
+  try{
+    if(FS){ await FS.setDoc(FS.doc(FS.db,'logs',id),patch,{merge:true}); }
+    else{
+      const old=state.logs.find(l=>l.id===id);
+      if(old) Object.assign(old,patch);else state.logs.unshift({id,...patch});
+      saveLocal();
+    }
+    document.getElementById('dailyError').textContent='확인 내용을 저장했습니다.';
+  }catch(e){ document.getElementById('dailyError').textContent='저장 실패 — 연결 상태와 권한을 확인하고 다시 눌러 주세요.'; }
+  finally{ dailyBusy=false;renderDashboard(); }
+}
+function openDailyEntry(key){
+  const day=document.getElementById('dashDate').value||todayISO();
+  if(key==='mat'){go('cost');openMatModal('buy');document.getElementById('matDate').value=day;return;}
+  if(key==='prod'){go('cost');document.getElementById('bDate').value=day;document.getElementById('b_prod').scrollIntoView({block:'center'});return;}
+  go('move');setType('out');document.getElementById('mDate').value=day;
+}
+function renderDashboard(){
+  const dateInput=document.getElementById('dashDate');if(!dateInput) return;
+  if(!dateInput.value) dateInput.value=todayISO();dateInput.max=todayISO();
+  const day=dateInput.value;
+  document.getElementById('dailyQuestions').innerHTML=CHECK_SECTIONS.map(([key,title])=>{
+    const moves=dayMoves(day,key), review=dailyReview(day,key);
+    const status=review?(review.status==='none'?'작업 없음 확인':'기록 확인 완료'):(moves.length?'마감 확인 필요':'아직 미확인');
+    return `<div class="checkrow"><span class="checkstatus ${review?'done':''}">${status}</span><b>${title}</b><small>${moves.length?'저장된 기록 '+moves.length+'건':'저장된 기록이 없습니다.'}${review?' · '+esc(review.user)+' 확인':''}</small><div class="checkactions"><button class="primary" onclick="openDailyEntry('${key}')">${moves.length?'추가 기록':'기록하기'}</button><button onclick="saveDailyReview('${key}','done')" ${dailyBusy||!moves.length?'disabled':''}>기록 확인</button><button onclick="saveDailyReview('${key}','none')" ${dailyBusy||moves.length?'disabled':''}>작업 없음</button></div></div>`;
+  }).join('');
+  const intake=dayMoves(day,'mat').filter(l=>l.matId==='woopi').reduce((a,l)=>a+l.qty,0);
+  const made=dayMoves(day,'prod').filter(l=>categoryOf(l.pname)==='made').reduce((a,l)=>a+l.qty,0);
+  const shipped=dayMoves(day,'out').filter(l=>categoryOf(l.pname)==='made').reduce((a,l)=>a+l.qty,0);
+  const pending=CHECK_SECTIONS.filter(([k])=>!dailyReview(day,k)).length;
+  const woopi=state.materials.find(m=>m.id==='woopi');
+  const metrics=[['원물(우피) 입고',intake,woopi?woopi.unit:'kg'],['자체생산 완제품 입고',made,'EA'],['자체생산 제품 출고',shipped,'EA'],['확인할 항목',pending,'/ 3']];
+  document.getElementById('dashMetrics').innerHTML=metrics.map(([name,n,u],i)=>{const key=['mat','prod','out'][i],known=i===3||dayMoves(day,key).length||dailyReview(day,key);return `<div class="card dashmetric"><small>${name}</small><strong>${known?Number(n.toFixed(2)).toLocaleString():'미확인'} <em>${known?esc(u):''}</em></strong><small>${name==='확인할 항목'?'선택한 날짜 기준':'선택일의 저장된 기록 합계'}</small></div>`;}).join('');
+  const sel=document.getElementById('dashProduct'), selected=sel.value;
+  const productKey=state.products.map(p=>p.id+':'+p.name).join('|');
+  if(sel.dataset.key!==productKey){sel.innerHTML=state.products.map(p=>`<option value="${esc(p.id)}">${esc(p.name)} · ${unitInfo(p.name).unit}</option>`).join('');sel.dataset.key=productKey;if(state.products.some(p=>p.id===selected))sel.value=selected;}
+  const p=state.products.find(p=>p.id===sel.value);
+  const end=new Date(day+'T12:00:00'), days=[];
+  for(let i=6;i>=0;i--){const d=new Date(end);d.setDate(d.getDate()-i);const iso=d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');const m=state.logs.filter(l=>logDay(l)===iso&&p&&l.pid===p.id&&l.kind!=='dailyCheck');days.push({iso,label:iso.slice(5).replace('-','/'),in:m.filter(l=>l.type==='in').reduce((a,l)=>a+l.qty,0),out:m.filter(l=>l.type==='out').reduce((a,l)=>a+l.qty,0),hasIn:m.some(l=>l.type==='in'),hasOut:m.some(l=>l.type==='out')});}
+  const max=Math.max(1,...days.flatMap(d=>[d.in,d.out]));
+  const bars=days.map((d,i)=>{const x=35+i*49;return ['in','out'].map((k,j)=>{const v=d[k],h=v/max*100,known=(k==='in'?d.hasIn:d.hasOut)||!!dailyReview(d.iso,k==='in'?'prod':'out');const bx=x+j*17;return `<rect x="${bx}" y="${143-h}" width="13" height="${h}" rx="3" fill="var(--${k})"/><text x="${bx+6}" y="${known?136-h:141}" text-anchor="middle" fill="var(--sub)" font-size="9">${known?v:'—'}</text>`;}).join('')+`<text x="${x+15}" y="163" text-anchor="middle" fill="var(--sub)" font-size="10">${d.label}</text>`;}).join('');
+  const table=days.map(d=>`<tr><td>${d.label}</td><td>${d.hasIn||dailyReview(d.iso,'prod')?d.in:'미확인'}</td><td>${d.hasOut||dailyReview(d.iso,'out')?d.out:'미확인'}</td></tr>`).join('');
+  document.getElementById('dashTrend').innerHTML=p?`<svg viewBox="0 0 390 180" role="img" aria-label="${esc(p.name)} 최근 7일 입출고 막대 그래프"><text x="4" y="13" font-size="10" fill="var(--sub)">최대 ${max.toLocaleString()} ${unitInfo(p.name).unit}</text><line x1="24" x2="381" y1="144" y2="144" stroke="var(--line)"/>${bars}</svg><details><summary style="font-size:12px">날짜별 수치 보기</summary><table class="tbl"><thead><tr><th>날짜</th><th>입고</th><th>출고</th></tr></thead><tbody>${table}</tbody></table></details>`:'<p>제품을 추가하면 추이가 표시됩니다.</p>';
+  const channelNames=['네이버스토어','쿠팡','펫프렌즈','기타'];
+  const channelTotals=channelNames.map(name=>({name,qty:state.logs.filter(l=>p&&l.pid===p.id&&l.type==='out'&&days.some(d=>d.iso===logDay(l))&&(name==='기타'?!channelNames.slice(0,3).includes(l.chan):l.chan===name)).reduce((n,l)=>n+l.qty,0)}));
+  const channelMax=Math.max(1,...channelTotals.map(c=>c.qty));
+  document.getElementById('dashChannels').innerHTML=p&&channelTotals.some(c=>c.qty)?channelTotals.map(c=>`<div class="stockbar"><span><b>${c.name}</b><b>${c.qty.toLocaleString()} ${unitInfo(p.name).unit}</b></span><div class="track"><div class="fill" style="width:${c.qty/channelMax*100}%"></div></div></div>`).join(''):'<p>선택 기간에 불러온 출고 기록이 없습니다.</p>';
+  const low=state.products.filter(p=>(p.stock||0)<=(p.min==null?LOW:p.min)).sort((a,b)=>(a.stock||0)-(b.stock||0)).slice(0,6);
+  document.getElementById('dashStockBars').innerHTML=low.length?low.map(p=>{const min=p.min==null?LOW:p.min, stock=p.stock||0, width=Math.max(0,Math.min(100,stock/Math.max(1,min)*100));return `<div class="stockbar"><span><b>${esc(p.name)}</b><b>${stock.toLocaleString()} / ${min.toLocaleString()} ${unitInfo(p.name).unit}</b></span><div class="track"><div class="fill low" style="width:${width}%"></div></div></div>`;}).join(''):'<p>보충이 필요한 제품이 없습니다.</p>';
+}
+
+/* ---------- 짧은 문장 / 음성 입력: 자동 저장하지 않고 기존 입력 화면을 채운다 ---------- */
+function dictateQuick(){
+  const Recognition=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if(!Recognition){document.getElementById('quickError').textContent='이 브라우저에서는 키보드의 마이크 버튼으로 말해 주세요.';return;}
+  const r=new Recognition();r.lang='ko-KR';r.interimResults=false;
+  r.onresult=e=>{document.getElementById('quickText').value=e.results[0][0].transcript;captureDraft('move');document.getElementById('quickError').textContent='내용을 확인한 뒤 입력칸 채우기를 눌러 주세요.';};
+  r.onerror=()=>{document.getElementById('quickError').textContent='음성을 읽지 못했습니다. 키보드 마이크나 문자 입력을 이용해 주세요.';};
+  try{r.start();document.getElementById('quickError').textContent='듣고 있습니다…';}catch(e){document.getElementById('quickError').textContent='마이크를 시작하지 못했습니다.';}
+}
+function fillQuickEntry(){
+  const text=document.getElementById('quickText').value.trim(), flat=text.replace(/\s/g,'');
+  const err=document.getElementById('quickError');err.textContent='';
+  const quantities=[...flat.matchAll(/(\d+(?:\.\d+)?)\s*(kg|킬로그램|키로|킬로|개|봉|EA|ea|박스|box)/g)];
+  if(quantities.length!==1){err.textContent='한 번에 한 품목과 수량 하나를 말해 주세요. 예: 우피 100kg 입고';return;}
+  const q=Number(quantities[0][1]), unit=quantities[0][2];if(!(q>0)){err.textContent='0보다 큰 수량이 필요합니다.';return;}
+  const day=/어제/.test(text)?isoDate(-1):todayISO();
+  if(/입고|매입/.test(text)&&/kg|킬로|키로/.test(unit)){
+    const ms=state.materials.filter(m=>flat.includes(m.name.replace(/\s/g,''))||(m.id==='woopi'&&/우피|원물/.test(flat)));
+    if(ms.length!==1||!['kg','킬로그램'].includes(ms[0].unit)){err.textContent='kg 단위로 등록된 원재료 이름 하나를 정확히 적어 주세요.';return;}
+    openMatModal('buy');document.getElementById('matSelect').value=ms[0].id;document.getElementById('matQty').value=q;document.getElementById('matDate').value=day;return;
+  }
+  const ps=state.products.filter(p=>flat.includes(p.name.replace(/\s/g,''))).sort((a,b)=>b.name.length-a.name.length);
+  if(!ps.length||(ps.length>1&&!ps.slice(1).every(p=>ps[0].name.includes(p.name)))){err.textContent='등록된 제품 이름 하나를 정확히 적어 주세요.';return;}
+  const p=ps[0],u=unitInfo(p.name);if(!Number.isInteger(q)||((/박스|box/.test(unit))!==(u.unit==='box'))){err.textContent='이 제품의 수량은 '+u.unit+' 단위 정수로 입력해 주세요.';return;}
+  if(/생산|완성|포장/.test(text)){
+    if(categoryOf(p.name)!=='made'){err.textContent='자체생산 제품을 선택해 주세요.';return;}
+    go('cost');document.getElementById('b_prod').value=p.id;document.getElementById('b_out').value=q;document.getElementById('bDate').value=day;calcCost();captureDraft('cost');document.getElementById('b_prod').scrollIntoView({block:'center'});return;
+  }
+  if(!/출고|발송/.test(text)){err.textContent='입고·생산·출고 중 어떤 작업인지 함께 적어 주세요.';return;}
+  const channels=[['쿠팡','쿠팡'],['펫프렌즈','펫프렌즈'],['펫프랜즈','펫프렌즈'],['스스','네이버스토어'],['네이버','네이버스토어']].filter(([word])=>text.includes(word));
+  if(new Set(channels.map(c=>c[1])).size!==1){err.textContent='출고할 판매처 하나도 적어 주세요. 스스 / 쿠팡 / 펫프렌즈';return;}
+  document.getElementById('mProd').value=p.id;setType('out');chan=channels[0][1];document.querySelectorAll('#mChan button').forEach(b=>b.classList.toggle('sel',b.dataset.c===chan));document.getElementById('mQty').value=q;document.getElementById('mDate').value=day;updatePreview();captureDraft('move');err.textContent='입력칸을 채웠습니다. 제품·판매처·날짜를 확인하고 저장해 주세요.';
+}
+function captureDraft(tab){
+  const root=document.getElementById('t-'+tab);if(!root)return;
+  const values={};root.querySelectorAll('input[id],select[id],textarea[id]').forEach(el=>values[el.id]=el.value);
+  const mats={};root.querySelectorAll('.b-mat-input').forEach(el=>mats[el.dataset.mat]=el.value);
+  try{localStorage.setItem('pf_draft_'+tab,JSON.stringify({values,mats,type,chan,at:Date.now()}));showDraftNotice();}catch(e){document.getElementById('draftNotice').style.display='block';document.getElementById('draftNotice').textContent='임시저장 공간이 부족합니다. 입력 내용을 저장해 주세요.';}
+}
+function clearDraft(tab){localStorage.removeItem('pf_draft_'+tab);showDraftNotice();}
+function showDraftNotice(){
+  const tabs=['move','cost'].filter(t=>localStorage.getItem('pf_draft_'+t));
+  const el=document.getElementById('draftNotice');el.style.display=tabs.length?'block':'none';
+  el.innerHTML=tabs.map(t=>`<div>저장하지 않은 ${t==='move'?'입출고':'생산'} 입력이 있습니다. <button onclick="restoreDraft('${t}')">이어쓰기</button> <button onclick="clearDraft('${t}')">버리기</button></div>`).join('');
+}
+function restoreDraft(tab){
+  try{
+    const draft=JSON.parse(localStorage.getItem('pf_draft_'+tab));if(!draft)return;go(tab);
+    Object.entries(draft.values).forEach(([id,v])=>{const el=document.getElementById(id);if(el)el.value=v;});
+    document.querySelectorAll('#t-'+tab+' .b-mat-input').forEach(el=>{if(draft.mats[el.dataset.mat]!=null)el.value=draft.mats[el.dataset.mat];});
+    if(tab==='move'){chan=draft.chan;setType(draft.type);document.querySelectorAll('#mChan button').forEach(b=>b.classList.toggle('sel',b.dataset.c===chan));updatePreview();}else calcCost();
+  }catch(e){document.getElementById('draftNotice').textContent='임시저장 내용을 읽지 못했습니다.';}
+}
+
 /* ---------- helpers ---------- */
 function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g, c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 function jumpTo(id){ document.getElementById('mProd').value=id; setType('in'); go('move'); updatePreview(); }
 
 /* ---------- render ---------- */
 function render(){
+  renderDashboard();
   // stock — 대분류(자체생산 / 맘엔펫 납품)로 그룹
   const list=document.getElementById('stockList'); list.innerHTML='';
   let outCnt=0, lowCnt=0;
@@ -1439,7 +1621,7 @@ function render(){
     const opts=items.map(p=>`<option value="${p.id}">${p.name} (재고 ${p.stock||0} ${unitInfo(p.name).unit})</option>`).join('');
     return `<optgroup label="${cat.label}">${opts}</optgroup>`;
   }).join('');
-  if(cur) sel.value=cur; updatePreview();
+  if(cur && state.products.some(p=>p.id===cur)) sel.value=cur; updatePreview();
 
   // materials (원재료 재고) — 제품처럼 자유롭게 추가/관리 가능
   const mats = sortedMaterials();
@@ -1506,8 +1688,9 @@ function render(){
 
   // logs (제품 입출고 + 원재료 매입/조정)
   const ll=document.getElementById('logList');
-  if(!state.logs.length){ ll.innerHTML='<div class="empty">아직 기록이 없습니다.<br>입출고 탭에서 첫 기록을 남겨보세요.</div>'; }
-  else ll.innerHTML=state.logs.map(l=>{
+  const movementLogs=state.logs.filter(l=>l.kind!=='dailyCheck');
+  if(!movementLogs.length){ ll.innerHTML='<div class="empty">아직 기록이 없습니다.<br>입출고 탭에서 첫 기록을 남겨보세요.</div>'; }
+  else ll.innerHTML=movementLogs.map(l=>{
     if(l.kind==='material'){
       const plus=l.qty>=0;
       return `<div class="card log">
@@ -1559,19 +1742,23 @@ function calcCost(){
     ${pcsPerKg!=null?`<div class="r"><span>원물(우피) 1kg당 생산 개수</span><b>${pcsPerKg.toFixed(1)}개</b></div>`:''}
     ${yieldPct!=null?`<div class="r"><span>수율 (완성kg÷투입kg)</span><b>${yieldPct.toFixed(1)}%${yieldPct>100?' ⚠️ 완성중량이 투입량보다 큽니다':''}</b></div>
     <div class="r"><span>로스율</span><b>${Math.max(0,100-yieldPct).toFixed(1)}%</b></div>`:''}
-    ${price>0?`<div class="r"><span>개당 한계이익</span><b class="${mp>=0?'pos':'neg'}">${w(mp)}원</b></div>
-    <div class="r"><span>마진율</span><b class="${mp>=0?'pos':'neg'}">${mr.toFixed(1)}%</b></div>`:'<div class="r"><span style="color:var(--sub)">판매공급가 입력 시 마진 계산</span><b></b></div>'}`;
+    ${price>0?`<div class="r"><span>개당 제조원가 차감액</span><b class="${mp>=0?'pos':'neg'}">${w(mp)}원</b></div>
+    <div class="r"><span>제조원가 차감률</span><b class="${mp>=0?'pos':'neg'}">${mr.toFixed(1)}%</b></div>`:'<div class="r"><span style="color:var(--sub)">판매공급가 입력 시 마진 계산</span><b></b></div>'}`;
 }
 ['p_wage','p_dry','b_work','b_dry','b_out','b_outkg','b_price']
   .forEach(id=>document.getElementById(id).addEventListener('input',calcCost));
 
 /* ---------- csv ---------- */
-function exportCSV(){
-  const rows=[['날짜','제품','유형','수량','판매처','담당','메모']];
-  state.logs.filter(l=>l.kind!=='material').forEach(l=>rows.push([l.date,l.pname,l.type==='in'?'입고':(l.type==='out'?'출고':'조정'),l.qty,l.chan,l.user,l.memo||'']));
+async function exportCSV(){
+  // 화면의 최근 300건 제한과 무관하게 전체 이력을 가져온다. 원재료 이력도 포함.
+  let logs=state.logs;
+  if(FS){const snapshot=await FS.getDocs(FS.collection(FS.db,'logs'));logs=snapshot.docs.map(d=>({id:d.id,...d.data()}));}
+  const rows=[['날짜','제품 또는 원재료','유형','수량','판매처','담당','메모','개당제조원가','수율(%)','입고단가','매입금액']];
+  logs.filter(l=>l.kind!=='dailyCheck').sort((a,b)=>b.ts-a.ts).forEach(l=>rows.push([l.dateISO||l.date,l.pname||l.matName,l.kind==='material'?(l.mkind==='buy'?'원재료매입':'원재료조정'):(l.type==='in'?'입고':(l.type==='out'?'출고':'조정')),l.qty,l.chan||'',l.user,l.memo||'',l.unitCost??'',l.yieldPct??'',l.unitPrice??'',l.totalCost??'']));
   const csv='\uFEFF'+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n');
   const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
-  a.download='펫포커스_입출고_'+new Date().toISOString().slice(0,10)+'.csv'; a.click();
+  a.download='펫포커스_입출고_'+todayISO()+'.csv'; a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href),1000);
 }
 
 /* ---------- nav ---------- */
@@ -1591,6 +1778,18 @@ function setDate(off){ document.getElementById('mDate').value=isoDate(off); }
 function setMatDate(off){ document.getElementById('matDate').value=isoDate(off); }
 document.getElementById('today').textContent=new Date().toLocaleDateString('ko-KR',{year:'2-digit',month:'2-digit',day:'2-digit'})+' 기준';
 document.getElementById('mDate').value=todayISO();
+document.getElementById('bDate').value=todayISO();
+// 생산 완료 입력을 단가 설정과 원재료 관리보다 앞에 둔다.
+const costTab=document.getElementById('t-cost');
+const prodHeading=document.getElementById('productionHeading');
+const prodCard=prodHeading.nextElementSibling;
+costTab.prepend(prodHeading,prodCard);
+document.querySelector('#t-stock .dash').prepend(document.querySelector('#t-stock .stat'));
+document.querySelector('.wrap').prepend(document.getElementById('offBanner'));
+document.addEventListener('input',e=>{const tab=e.target.closest('#t-move,#t-cost');if(tab)captureDraft(tab.id.slice(2));});
+document.addEventListener('change',e=>{const tab=e.target.closest('#t-move,#t-cost');if(tab)captureDraft(tab.id.slice(2));});
+showDraftNotice();
+setUser(localStorage.getItem('pf_user')==='동생'?'동생':'형');
 setType('out'); calcCost(); initStore();
 </script>
 </body>
